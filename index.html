@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Планировщик задач</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    /* Dark mode */
+    .dark { color-scheme: dark; }
+    .dark body, .dark { background: #111827; color: #e5e7eb; }
+    .dark .bg-white { background: #1f2937; }
+    .dark .bg-gray-50 { background: #111827; }
+    .dark .bg-gray-100 { background: #374151; }
+    .dark .border-gray-200, .dark .border-gray-100, .dark .border-gray-50 { border-color: #374151; }
+    .dark .text-gray-900, .dark .text-gray-800 { color: #f3f4f6; }
+    .dark .text-gray-700, .dark .text-gray-600 { color: #d1d5db; }
+    .dark .text-gray-500, .dark .text-gray-400 { color: #9ca3af; }
+    .dark .text-gray-300 { color: #6b7280; }
+    .dark .hover\:bg-gray-50:hover { background: #374151; }
+    .dark .hover\:bg-gray-100:hover { background: #374151; }
+    .dark .hover\:bg-gray-200:hover { background: #4b5563; }
+    .dark tr.bg-gray-50\/70 { background: rgba(55,65,81,0.5); }
+    .dark tr.bg-white { background: #1f2937; }
+    .dark .sticky { background: #1f2937; }
+    .dark input, .dark textarea { background: #374151; border-color: #4b5563; color: #f3f4f6; }
+    .dark input::placeholder, .dark textarea::placeholder { color: #6b7280; }
+    .dark .task-chip { border-color: #4b5563; }
+    .dark .rounded-xl { border-color: #374151; }
+    .dark .bg-blue-50 { background: rgba(59,130,246,0.15); }
+    .dark .bg-gray-50\/70 { background: rgba(55,65,81,0.5); }
+    .dark .shadow-sm, .dark .shadow-xl { box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+    .dark .divide-gray-50 > :not([hidden]) ~ [hidden] { border-color: #374151; }
+    .grid-table table { table-layout: fixed; }
+    .grid-table col.time-col { width: 60px; }
+    .grid-table col.day-col { }
+    .task-chip {
+      display: block;
+      width: 100%;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      position: relative;
+      font-size: 10px;
+      line-height: 1.2;
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+    .task-chip:hover { opacity: 0.85; }
+    .cell { position: relative; overflow: hidden; cursor: pointer; padding: 2px !important; }
+    .cell:hover { background: rgba(0,0,0,0.02); }
+    .cell-tasks { display: flex; flex-direction: column; gap: 1px; }
+    @media (max-width: 768px) {
+    .grid-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .grid-table { min-width: 650px; }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen" x-data="planner()" x-init="init()">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
+      <h1 class="text-lg font-bold text-gray-900 hidden sm:block">Планировщик</h1>
+      <div class="relative flex-1 max-w-xs">
+        <input type="text" x-model="searchQuery" placeholder="Поиск..."
+               class="w-full pl-8 pr-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-400">
+        <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      </div>
+      <div class="flex items-center gap-2">
+        <button @click="prevWeek()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-600">&larr;</button>
+        <button @click="goToday()" class="px-3 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-sm font-medium text-gray-700">Сегодня</button>
+        <button @click="nextWeek()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-600">&rarr;</button>
+        <span class="ml-2 text-sm text-gray-500 hidden sm:inline" x-text="weekLabel()"></span>
+        <button @click="toggleDark()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-lg" x-text="darkMode ? '☀️' : '🌙'"></button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <div class="bg-white border-b border-gray-200">
+    <div class="max-w-6xl mx-auto px-4 flex items-center gap-1 overflow-x-auto py-1">
+      <template x-for="(tab, ti) in tabs" :key="tab.id">
+        <div class="flex items-center group shrink-0"
+             :class="activeTab===tab.id ? 'border-b-2 border-gray-900' : ''">
+          <button @click="switchTab(tab.id)"
+                  class="px-3 py-1.5 text-sm font-medium transition-colors"
+                  :class="activeTab===tab.id ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600'"
+                  x-text="tab.name"></button>
+          <button @click="renameTab(tab)" class="text-gray-300 hover:text-gray-500 text-xs hidden group-hover:inline transition-colors">&#9998;</button>
+          <button @click="deleteTab(tab.id)" class="text-gray-300 hover:text-red-400 text-xs hidden group-hover:inline transition-colors ml-0.5"
+                  x-show="tabs.length > 1">&times;</button>
+        </div>
+      </template>
+      <button @click="addTab()" class="shrink-0 w-6 h-6 flex items-center justify-center text-gray-300 hover:text-gray-600 text-lg rounded hover:bg-gray-100 transition-colors">+</button>
+    </div>
+  </div>
+
+  <!-- Grid -->
+  <div class="max-w-6xl mx-auto px-4 py-4 grid-scroll">
+    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden grid-table relative">
+      <!-- Current time line -->
+      <div x-show="timeLine.visible"
+           class="absolute left-0 right-0 z-20 pointer-events-none"
+           :style="'top:'+timeLine.top+'px'">
+        <div class="border-t border-dashed border-red-300"></div>
+      </div>
+      <table class="w-full border-collapse">
+        <thead>
+          <tr>
+            <th class="w-16 md:w-20 p-2 text-xs text-gray-400 font-normal border-b border-r border-gray-100"></th>
+            <template x-for="(day, di) in days" :key="di">
+                <td class="p-2 text-center border-b border-r border-gray-100 last:border-r-0"
+                  :class="isToday(day.date) ? '!border-b-4 !border-b-blue-400' : ''">
+                <div class="text-xs font-medium" :class="isToday(day.date) ? 'text-blue-600' : 'text-gray-500'" x-text="day.short"></div>
+                <div class="text-lg font-bold" :class="isToday(day.date) ? 'text-blue-600' : 'text-gray-900'" x-text="day.num"></div>
+              </th>
+            </template>
+            <th class="w-8 border-b border-r border-gray-100">
+              <button @click="toggleSunday()" class="w-full h-full flex items-center justify-center text-gray-300 hover:text-gray-600 text-lg"
+                      :class="showSunday ? 'text-blue-400' : ''" x-text="showSunday ? '−' : '+'"></button>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="(hour, hi) in hours" :key="hour">
+            <tr :class="hi % 2 === 0 ? 'bg-white' : 'bg-gray-50/70'" style="height:52px">
+              <td class="p-1 text-[11px] text-gray-400 text-right pr-2 border-r border-b border-gray-100 align-top pt-2"
+                  x-text="hour + ':00'"></td>
+              <template x-for="(day, di) in days" :key="di">
+                <td class="border-b border-r border-gray-50 last:border-r-0 p-1 align-top min-h-[52px] cell"
+                    :data-day="day.dateStr" :data-hour="hour"
+                    @dragover.prevent="$el.classList.add('bg-blue-50')"
+                    @dragleave="$el.classList.remove('bg-blue-50')"
+                    @drop.prevent="$el.classList.remove('bg-blue-50'); dropTask(day.dateStr, hour)"
+                    @click="$event.target === $el && openModal(day.dateStr, hour)">
+                  <div class="cell-tasks">
+                  <template x-for="task in getTasks(day.dateStr, hour).slice(0, expandedCells[day.dateStr+':'+hour] ? 99 : 2)" :key="task.id">
+                    <div class="task-chip rounded border group"
+                         :style="taskStyle(task)"
+                         draggable="true"
+                         @dragstart="dragStart($event, task)"
+                         @click.stop="openModal(day.dateStr, hour, task)">
+                      <div class="flex items-center gap-0.5">
+                        <button class="flex-shrink-0 w-3 h-3 rounded border border-gray-400 bg-white flex items-center justify-center text-[9px] leading-none text-gray-700"
+                                @click.stop="toggleStatus(task)"
+                                x-text="task.status==='done' ? '✓' : ''"></button>
+                        <span x-text="task.text" class="overflow-hidden text-ellipsis"
+                              :class="task.status==='done' ? 'line-through opacity-50' : ''"></span>
+                      </div>
+                      <template x-if="task.deadline && !task.name && !task.phone">
+                        <span class="text-[9px] block"
+                              :class="isOverdue(task) ? 'text-red-600 font-bold' : 'opacity-50'"
+                              x-text="fmtDeadline(task.deadline)"></span>
+                      </template>
+                    </div>
+                  </template>
+                  <template x-if="getTasks(day.dateStr, hour).length > 2">
+                    <div class="text-[9px] text-gray-400 cursor-pointer hover:text-gray-600 font-medium"
+                         @click.stop="toggleExpand(day.dateStr+':'+hour)"
+                         x-text="expandedCells[day.dateStr+':'+hour] ? 'свернуть' : '+' + (getTasks(day.dateStr, hour).length - 2) + ' ещё'"></div>
+                  </template>
+                  <template x-if="getTasks(day.dateStr, hour).length > 0 && getTasks(day.dateStr, hour).length <= 2">
+                    <div class="text-[9px] text-gray-300 cursor-pointer hover:text-gray-500"
+                         @click.stop="openModal(day.dateStr, hour)">+</div>
+                  </template>
+                  </div>
+                </td>
+              </template>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Hour controls -->
+  <div class="max-w-6xl mx-auto px-4 pb-2 flex items-center gap-4 text-xs text-gray-400 flex-wrap">
+    <div class="flex items-center gap-1.5">
+      <span>Начало:</span>
+      <button @click="addHourStart()" class="w-5 h-5 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 text-gray-500">+</button>
+      <span class="font-medium text-gray-600 w-8 text-center" x-text="hourStart+':00'"></span>
+      <button @click="removeHourStart()" class="w-5 h-5 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 text-gray-500">−</button>
+    </div>
+    <div class="flex items-center gap-1.5">
+      <span>Конец:</span>
+      <button @click="addHourEnd()" class="w-5 h-5 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 text-gray-500">+</button>
+      <span class="font-medium text-gray-600 w-8 text-center" x-text="hourEnd+1+':00'"></span>
+      <button @click="removeHourEnd()" class="w-5 h-5 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 text-gray-500">−</button>
+    </div>
+    <div class="flex items-center gap-1.5 ml-auto">
+      <button @click="showNamesList = !showNamesList" class="hover:text-gray-600 transition-colors">
+        Имена (<span x-text="knownNames.length"></span>)
+      </button>
+    </div>
+  </div>
+
+  <!-- Known names list -->
+  <template x-if="showNamesList">
+    <div class="max-w-6xl mx-auto px-4 mb-3">
+      <div class="bg-white rounded-xl border border-gray-200 p-3">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs text-gray-500 font-medium">База имён</span>
+          <button @click="showNamesList=false" class="text-gray-400 hover:text-gray-600 text-xs">закрыть</button>
+        </div>
+        <div class="flex flex-wrap gap-1.5">
+          <template x-for="n in knownNames" :key="n">
+            <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full">
+              <span x-text="n"></span>
+              <button @click="removeName(n)" class="text-gray-400 hover:text-red-500 text-[10px]">&times;</button>
+            </span>
+          </template>
+          <template x-if="knownNames.length === 0">
+            <span class="text-xs text-gray-400">Пока пусто. Имена добавляются автоматически при сохранении задач.</span>
+          </template>
+        </div>
+      </div>
+    </div>
+  </template>
+  <template x-if="searchQuery.trim() && searchResults().length > 0">
+    <div class="max-w-6xl mx-auto px-4 mb-4">
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="px-4 py-2 bg-gray-50 border-b text-sm text-gray-500 flex items-center justify-between">
+          <span>Результаты поиска: <strong x-text="searchResults().length"></strong></span>
+          <button @click="searchQuery=''" class="text-gray-400 hover:text-gray-600">Очистить</button>
+        </div>
+        <div class="max-h-64 overflow-y-auto divide-y divide-gray-50">
+          <template x-for="t in searchResults()" :key="t.id">
+            <div class="px-4 py-2.5 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                 @click="jumpToTask(t)">
+              <button class="flex-shrink-0 w-4 h-4 rounded border border-gray-400 bg-white flex items-center justify-center text-[11px] leading-none text-gray-700"
+                      @click.stop="toggleStatus(t)"
+                      x-text="t.status==='done' ? '✓' : ''"></button>
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-medium text-gray-900 truncate" :class="t.status==='done' ? 'line-through opacity-50' : ''" x-text="t.text"></div>
+                <div class="text-xs text-gray-400" x-text="formatTaskDate(t)"></div>
+                <template x-if="t.deadline">
+                  <span class="text-xs mt-0.5" :class="isOverdue(t) ? 'text-red-500 font-bold' : 'text-gray-400'" x-text="'до ' + fmtDeadline(t.deadline)"></span>
+                </template>
+              </div>
+              <template x-if="t.name">
+                <span class="text-xs text-gray-400 hidden sm:inline" x-text="t.name"></span>
+              </template>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- Legend -->
+  <div class="max-w-6xl mx-auto px-4 py-2 flex gap-4 text-xs text-gray-500">
+    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-amber-100 border border-amber-200"></span> В работе</span>
+    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-green-100 border border-green-200"></span> Готово</span>
+  </div>
+
+  <!-- Modal -->
+  <div x-show="showModal" x-cloak
+       class="fixed inset-0 z-50 flex items-center justify-center p-4"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0">
+    <div class="absolute inset-0 bg-black/40" @click="closeModal()"></div>
+    <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 max-h-[90vh] overflow-y-auto"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 scale-95"
+         x-transition:enter-end="opacity-100 scale-100">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-bold text-gray-900" x-text="editingTask ? 'Редактировать' : 'Новая задача'"></h2>
+        <button @click="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+      </div>
+      <div class="text-xs text-gray-400 mb-3" x-text="modalDateLabel()"></div>
+      <form @submit.prevent="saveTask()">
+        <textarea x-model="formText" rows="2" required placeholder="Задача..."
+                  @input="autofillFromText()"
+                  class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:border-gray-400 mb-3"></textarea>
+        <div class="flex gap-2 mb-3">
+          <template x-for="c in colors" :key="c.id">
+            <button type="button" @click="formColor=c.id"
+                    class="w-7 h-7 rounded-full border-2 transition-all flex items-center justify-center"
+                    :class="formColor===c.id ? 'border-gray-900 scale-110' : 'border-transparent'"
+                    :style="'background:'+c.bg">
+              <span class="block w-3 h-3 rounded-full" :style="'background:'+c.dot"></span>
+            </button>
+          </template>
+        </div>
+        <div class="grid grid-cols-2 gap-2 mb-3">
+          <input type="text" x-model="formName" placeholder="Имя"
+                 class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400">
+          <input type="tel" x-model="formPhone" placeholder="Телефон"
+                 @input="onPhoneInput($event.target.value)"
+                 class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400">
+        </div>
+        <input type="text" x-model="formNote" placeholder="Примечание"
+               class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400 mb-3">
+        <template x-if="formHistory">
+          <div class="mb-3 p-2.5 bg-gray-50 border border-gray-200 rounded-xl">
+            <div class="text-[11px] font-medium text-gray-500 mb-1">Предыдущие записи:</div>
+            <div class="text-xs text-gray-600 whitespace-pre-line" x-text="formHistory"></div>
+          </div>
+        </template>
+        <input type="text" x-model="formExtra" placeholder="Доп. информация"
+               class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400 mb-3">
+        <div class="flex gap-2 items-center mb-3">
+          <label class="text-xs text-gray-400 whitespace-nowrap">Дедлайн</label>
+          <input type="date" x-model="formDeadline"
+                 class="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400">
+          <button type="button" @click="formDeadline=''" x-show="formDeadline" class="text-xs text-gray-400 hover:text-gray-600">убрать</button>
+        </div>
+        <div class="flex gap-2 mb-4">
+          <button type="button" @click="formStatus='todo'"
+                  class="flex-1 py-2 rounded-xl text-sm font-medium border transition-colors"
+                  :class="formStatus==='todo' ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'">
+            В работе
+          </button>
+          <button type="button" @click="formStatus='done'"
+                  class="flex-1 py-2 rounded-xl text-sm font-medium border transition-colors"
+                  :class="formStatus==='done' ? 'bg-green-100 text-green-800 border-green-300' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'">
+            Готово
+          </button>
+        </div>
+        <div class="flex gap-2">
+          <template x-if="editingTask">
+            <button type="button" @click="deleteTask()"
+                    class="px-4 py-2 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 border border-red-200">
+              Удалить
+            </button>
+          </template>
+          <div class="flex-1"></div>
+          <button type="button" @click="closeModal()"
+                  class="px-4 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100">
+            Отмена
+          </button>
+          <button type="submit"
+                  class="px-6 py-2 rounded-xl text-sm font-medium bg-gray-900 text-white hover:bg-gray-800">
+            Сохранить
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function planner() {
+      return {
+        tasks: [],
+        tabs: [],
+        activeTab: '',
+        showModal: false,
+        editingTask: null,
+        formText: '',
+        formStatus: 'todo',
+        formColor: 'amber',
+        formName: '',
+        formPhone: '',
+        formNote: '',
+        formExtra: '',
+        formDeadline: '',
+        formHistory: '',
+        formDay: '',
+        formHour: 10,
+        weekOffset: 0,
+        searchQuery: '',
+
+        colors: [
+          { id: 'amber',  bg: '#fef3c7', dot: '#f59e0b', text: 'text-amber-800',  border: 'border-amber-200',  bgDark: '#422006', textDark: '#fcd34d' },
+          { id: 'green',  bg: '#dcfce7', dot: '#22c55e', text: 'text-green-800',  border: 'border-green-200',  bgDark: '#052e16', textDark: '#86efac' },
+          { id: 'blue',   bg: '#dbeafe', dot: '#3b82f6', text: 'text-blue-800',   border: 'border-blue-200',   bgDark: '#1e3a5f', textDark: '#93c5fd' },
+          { id: 'purple', bg: '#f3e8ff', dot: '#a855f7', text: 'text-purple-800', border: 'border-purple-200', bgDark: '#3b0764', textDark: '#d8b4fe' },
+          { id: 'red',    bg: '#fee2e2', dot: '#ef4444', text: 'text-red-800',    border: 'border-red-200',    bgDark: '#450a0a', textDark: '#fca5a5' },
+        ],
+
+        hours: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+        days: [],
+        showSunday: false,
+        hourStart: 10,
+        hourEnd: 19,
+        timeLine: { visible: false, top: 0 },
+        timeInterval: null,
+
+        init() {
+          this.loadTabs();
+          this.loadNames();
+          this.darkMode = localStorage.getItem('planner_dark') === 'true';
+          this.applyDark();
+          this.calcWeek();
+          setTimeout(() => this.updateTimeLine(), 100);
+          this.timeInterval = setInterval(() => this.updateTimeLine(), 60000);
+        },
+
+        toggleDark() {
+          this.darkMode = !this.darkMode;
+          localStorage.setItem('planner_dark', this.darkMode);
+          this.applyDark();
+        },
+
+        applyDark() {
+          document.documentElement.classList.toggle('dark', this.darkMode);
+        },
+
+        calcWeek() {
+          const now = new Date();
+          const monday = new Date(now);
+          monday.setDate(now.getDate() - ((now.getDay() + 6) % 7) + this.weekOffset * 7);
+
+          const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+          const dayCount = this.showSunday ? 7 : 6;
+          this.days = [];
+          for (let i = 0; i < dayCount; i++) {
+            const d = new Date(monday);
+            d.setDate(monday.getDate() + i);
+            this.days.push({
+              short: dayNames[i] || 'Вс',
+              num: d.getDate(),
+              date: d,
+              dateStr: this.dateStr(d),
+            });
+          }
+          this.recalcHours();
+        },
+
+        recalcHours() {
+          const arr = [];
+          for (let h = this.hourStart; h <= this.hourEnd; h++) arr.push(h);
+          this.hours = arr;
+        },
+
+        toggleSunday() {
+          this.showSunday = !this.showSunday;
+          this.calcWeek();
+        },
+
+        addHourEnd() {
+          if (this.hourEnd < 23) { this.hourEnd++; this.recalcHours(); }
+        },
+
+        removeHourEnd() {
+          if (this.hourEnd > this.hourStart) { this.hourEnd--; this.recalcHours(); }
+        },
+
+        addHourStart() {
+          if (this.hourStart > 0) { this.hourStart--; this.recalcHours(); }
+        },
+
+        removeHourStart() {
+          if (this.hourStart < this.hourEnd) { this.hourStart++; this.recalcHours(); }
+        },
+
+        dateStr(d) {
+          return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        },
+
+        isToday(d) {
+          const now = new Date();
+          return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+        },
+
+        weekLabel() {
+          if (!this.days.length) return '';
+          const from = this.days[0].date;
+          const to = this.days[this.days.length - 1].date;
+          const fmt = (d) => `${d.getDate()} ${['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'][d.getMonth()]}`;
+          return `${fmt(from)} — ${fmt(to)}`;
+        },
+
+        prevWeek() { this.weekOffset--; this.calcWeek(); setTimeout(() => this.updateTimeLine(), 100); },
+        nextWeek() { this.weekOffset++; this.calcWeek(); setTimeout(() => this.updateTimeLine(), 100); },
+        goToday() { this.weekOffset = 0; this.calcWeek(); setTimeout(() => this.updateTimeLine(), 100); },
+
+        getTasks(day, hour) {
+          let list = this.tasks.filter(t => t.day === day && t.hour === hour);
+          if (this.searchQuery.trim()) {
+            const q = this.searchQuery.toLowerCase();
+            list = list.filter(t =>
+              (t.text || '').toLowerCase().includes(q) ||
+              (t.name || '').toLowerCase().includes(q) ||
+              (t.phone || '').toLowerCase().includes(q) ||
+              (t.note || '').toLowerCase().includes(q) ||
+              (t.extra || '').toLowerCase().includes(q)
+            );
+          }
+          return list;
+        },
+
+        openModal(day, hour, task = null) {
+          this.formDay = day;
+          this.formHour = hour;
+          this.editingTask = task;
+          this.formText = task ? task.text : '';
+          this.formStatus = task ? task.status : 'todo';
+          this.formColor = task ? (task.color || 'amber') : 'amber';
+          this.formName = task ? (task.name || '') : '';
+          this.formPhone = task ? (task.phone || '') : '';
+          this.formNote = task ? (task.note || '') : '';
+          this.formExtra = task ? (task.extra || '') : '';
+          this.formDeadline = task ? (task.deadline || '') : '';
+          this.formHistory = '';
+          if (task && task.phone) {
+            this.$nextTick(() => this.findPreviousByPhone(task.phone));
+          }
+          this.showModal = true;
+          this.$nextTick(() => {
+            const el = document.querySelector('textarea');
+            if (el) el.focus();
+          });
+        },
+
+        closeModal() {
+          this.showModal = false;
+          this.editingTask = null;
+          this.formText = '';
+          this.formStatus = 'todo';
+          this.formColor = 'amber';
+          this.formName = '';
+          this.formPhone = '';
+          this.formNote = '';
+          this.formExtra = '';
+          this.formDeadline = '';
+          this.formHistory = '';
+        },
+
+        saveTask() {
+          if (!this.formText.trim()) return;
+          const data = {
+            text: this.formText.trim(),
+            status: this.formStatus,
+            color: this.formColor,
+            name: this.formName.trim(),
+            phone: this.formPhone.trim(),
+            note: this.formNote.trim(),
+            extra: this.formExtra.trim(),
+            deadline: this.formDeadline,
+          };
+          if (this.editingTask) {
+            Object.assign(this.editingTask, data);
+          } else {
+            this.tasks.push({
+              id: Date.now(),
+              day: this.formDay,
+              hour: this.formHour,
+              ...data,
+            });
+          }
+          this.persist();
+          if (data.name) this.saveName(data.name);
+          if (data.phone && data.name) this.savePhoneName(data.phone, data.name);
+          this.closeModal();
+        },
+
+        deleteTask() {
+          if (!this.editingTask) return;
+          this.tasks = this.tasks.filter(t => t.id !== this.editingTask.id);
+          this.persist();
+          this.closeModal();
+        },
+
+        toggleStatus(task) {
+          task.status = task.status === 'done' ? 'todo' : 'done';
+          this.persist();
+        },
+
+        _dragTask: null,
+        expandedCells: {},
+        knownNames: [],
+        showNamesList: false,
+        darkMode: false,
+
+        dragStart(e, task) {
+          this._dragTask = task;
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', task.id);
+          e.target.style.opacity = '0.4';
+          setTimeout(() => { if (e.target) e.target.style.opacity = ''; }, 0);
+        },
+
+        dropTask(day, hour) {
+          if (!this._dragTask) return;
+          this._dragTask.day = day;
+          this._dragTask.hour = hour;
+          this._dragTask = null;
+          this.persist();
+        },
+
+        toggleExpand(key) {
+          this.expandedCells[key] = !this.expandedCells[key];
+        },
+
+        autofillFromText() {
+          const t = this.formText;
+          // Extract phone: 8XXXXXXXXXX or 7XXXXXXXXXX or +7XXXXXXXXXX
+          const phoneMatch = t.match(/(?:\+?7|8)(\d{10})\b/);
+          if (phoneMatch && !this.formPhone) {
+            this.formPhone = this.formatPhoneRaw(phoneMatch[0]);
+            this.onPhoneInput(this.formPhone);
+          }
+          // Extract name ONLY if phone lookup hasn't set it yet
+          if (!this.formName) {
+            const namePatterns = [
+              /(?:для|клиент|заказчик|имя|зовут|позвонить)\s+([А-ЯЁ][а-яё]{1,20})\b/i,
+              /\b([А-ЯЁ][а-яё]{2,20})\s+(?:позвонит|приедет|ждет|ждёт|записан|хочет|хочёт|нужен|нужна|будет)\b/i,
+              /\b([А-ЯЁ][а-яё]{2,20})\s+(?:tel|телефон|номер|тел)\b/i,
+            ];
+            for (const pat of namePatterns) {
+              const m = t.match(pat);
+              if (m) { this.formName = m[1]; break; }
+            }
+          }
+          // Check known names database
+          if (!this.formName) {
+            const lower = t.toLowerCase();
+            for (const n of this.knownNames) {
+              if (lower.includes(n.toLowerCase())) {
+                this.formName = n;
+                break;
+              }
+            }
+          }
+          // Last resort: standalone capitalized word
+          if (!this.formName) {
+            const ignore = /^(Замена|Проверка|Установка|Ремонт|Диагностика|Чистка|Заправка|Покупка|Продажа|Звонок|Встреча|Оплата|Доставка|Возврат|Сдача|Прием|Приём|Выдача|Осмотр|Обслуживание|ТО|ПТС|СТС|ДСА|ДТП)$/i;
+            const simpleMatch = t.match(/(?:^|[.,;!?\s])([А-ЯЁ][а-яё]{2,15})(?:[.,;!?\s]|$)/);
+            if (simpleMatch && !ignore.test(simpleMatch[1])) {
+              this.formName = simpleMatch[1];
+            }
+          }
+        },
+
+        onPhoneInput(val) {
+          const raw = val.replace(/\D/g, '');
+          this.formPhone = this.formatPhoneRaw(raw);
+          if (raw.length >= 10) {
+            this.findPreviousByPhone(raw);
+          }
+        },
+
+        formatPhone() {
+          const raw = this.formPhone.replace(/\D/g, '');
+          this.formPhone = this.formatPhoneRaw(raw);
+          if (raw.length >= 10) {
+            this.findPreviousByPhone(raw);
+          }
+        },
+
+        formatPhoneRaw(raw) {
+          const digits = raw.replace(/\D/g, '');
+          if (digits.length < 10) return raw;
+          const d = digits.slice(-10);
+          const full = digits.length >= 11 ? digits.slice(-11) : '7' + d;
+          return `+7 (${full.slice(1,4)}) ${full.slice(4,7)}-${full.slice(7,9)}-${full.slice(9,11)}`;
+        },
+
+        findPreviousByPhone(rawDigits) {
+          const digits = rawDigits.replace(/\D/g, '');
+          if (digits.length < 10) return;
+          // Quick lookup from phone_names database
+          // Quick lookup from phone_names database — only if name empty
+          if (!this.formName) {
+            try {
+              const map = JSON.parse(localStorage.getItem('planner_phone_names') || '{}');
+              const d10 = digits.slice(-10);
+              if (map[d10]) {
+                const names = Array.isArray(map[d10]) ? map[d10] : [map[d10]];
+                this.formName = names[names.length - 1];
+              }
+            } catch {}
+          }
+          // Search all tasks (all tabs) for this phone
+          let allTasks = [...this.tasks];
+          try {
+            const allData = JSON.parse(localStorage.getItem('planner_all_tasks') || '{}');
+            for (const [tabId, tabTasks] of Object.entries(allData)) {
+              if (tabId !== this.activeTab) allTasks = allTasks.concat(tabTasks);
+            }
+          } catch {}
+          const matches = allTasks.filter(t => {
+            if (!t.phone) return false;
+            const tDigits = t.phone.replace(/\D/g, '');
+            const t10 = tDigits.slice(-10);
+            const d10 = digits.slice(-10);
+            return t10 === d10;
+          });
+          if (matches.length === 0) { this.formHistory = ''; return; }
+          // Phone sets name only if field is empty — don't override manual input
+          if (!this.formName) {
+            const sorted = matches.sort((a, b) => b.day.localeCompare(a.day));
+            const named = sorted.find(t => t.name);
+            if (named) this.formName = named.name;
+          }
+          const refs = matches.map(t => {
+            const d = new Date(t.day + 'T00:00:00');
+            const months = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+            return `${d.getDate()} ${months[d.getMonth()]} — ${t.text}`;
+          });
+          this.formHistory = refs.join('\n');
+        },
+
+        getColor(colorId, prop) {
+          const c = this.colors.find(x => x.id === colorId) || this.colors[0];
+          return c[prop];
+        },
+
+        taskStyle(task) {
+          const c = task.status === 'done'
+            ? this.colors.find(x => x.id === 'green')
+            : this.colors.find(x => x.id === (task.color || 'amber')) || this.colors[0];
+          if (this.darkMode) {
+            return `background:${c.bgDark};border-color:${c.dot};color:${c.textDark}`;
+          }
+          return `background:${c.bg};border-color:${c.dot};color:${c.text}`;
+        },
+
+        searchResults() {
+          const q = this.searchQuery.toLowerCase().trim();
+          if (!q) return [];
+          return this.tasks.filter(t =>
+            (t.text || '').toLowerCase().includes(q) ||
+            (t.name || '').toLowerCase().includes(q) ||
+            (t.phone || '').toLowerCase().includes(q) ||
+            (t.note || '').toLowerCase().includes(q) ||
+            (t.extra || '').toLowerCase().includes(q)
+          ).sort((a, b) => a.day.localeCompare(b.day) || a.hour - b.hour);
+        },
+
+        jumpToTask(task) {
+          const d = new Date(task.day + 'T00:00:00');
+          const now = new Date();
+          const monday = new Date(now);
+          monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+          const diffDays = Math.round((d - monday) / 86400000);
+          this.weekOffset = Math.floor(diffDays / 7);
+          this.calcWeek();
+          this.$nextTick(() => {
+            const taskDateStr = task.day;
+            const matchDay = this.days.find(dy => dy.dateStr === taskDateStr);
+            if (matchDay) {
+              const cell = document.querySelector(`td[data-day="${taskDateStr}"][data-hour="${task.hour}"]`);
+              if (cell) cell.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          });
+        },
+
+        formatTaskDate(task) {
+          const d = new Date(task.day + 'T00:00:00');
+          const dayNames = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+          const months = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+          return `${dayNames[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}, ${task.hour}:00`;
+        },
+
+        fmtDeadline(val) {
+          if (!val) return '';
+          const d = new Date(val + 'T00:00:00');
+          const months = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+          return `${d.getDate()} ${months[d.getMonth()]}`;
+        },
+
+        isOverdue(task) {
+          if (!task.deadline || task.status === 'done') return false;
+          const now = new Date();
+          const dl = new Date(task.deadline + 'T23:59:59');
+          return now > dl;
+        },
+
+        updateTimeLine() {
+          const now = new Date();
+          const h = now.getHours();
+          const m = now.getMinutes();
+          if (h < this.hourStart || h > this.hourEnd) {
+            this.timeLine.visible = false;
+            return;
+          }
+          const ROW_H = 52;
+          const thead = document.querySelector('thead');
+          const theadH = thead ? thead.offsetHeight : 0;
+          const hourIndex = h - this.hourStart;
+          const offset = theadH + hourIndex * ROW_H + (m / 60) * ROW_H;
+          this.timeLine.visible = true;
+          this.timeLine.top = offset;
+        },
+
+        modalDateLabel() {
+          if (!this.formDay) return '';
+          const d = new Date(this.formDay + 'T00:00:00');
+          const dayNames = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+          return `${dayNames[d.getDay()]}, ${this.formHour}:00`;
+        },
+
+        persist() {
+          const allTasks = JSON.parse(localStorage.getItem('planner_all_tasks') || '{}');
+          allTasks[this.activeTab] = this.tasks;
+          localStorage.setItem('planner_all_tasks', JSON.stringify(allTasks));
+        },
+
+        loadTasks() {
+          try {
+            const allTasks = JSON.parse(localStorage.getItem('planner_all_tasks') || '{}');
+            this.tasks = allTasks[this.activeTab] || [];
+          } catch {
+            this.tasks = [];
+          }
+        },
+
+        // Tab management
+        loadTabs() {
+          try {
+            this.tabs = JSON.parse(localStorage.getItem('planner_tabs') || '[]');
+          } catch {
+            this.tabs = [];
+          }
+          if (this.tabs.length === 0) {
+            this.tabs = [{ id: 'tab_1', name: 'Основное' }];
+            this.activeTab = 'tab_1';
+            // Migrate old single-storage tasks
+            const oldTasks = JSON.parse(localStorage.getItem('planner_tasks') || '[]');
+            if (oldTasks.length > 0) {
+              const allTasks = {};
+              allTasks['tab_1'] = oldTasks;
+              localStorage.setItem('planner_all_tasks', JSON.stringify(allTasks));
+              localStorage.removeItem('planner_tasks');
+            }
+            this.saveTabs();
+          } else {
+            this.activeTab = this.tabs[0].id;
+          }
+          this.loadTasks();
+        },
+
+        saveTabs() {
+          localStorage.setItem('planner_tabs', JSON.stringify(this.tabs));
+        },
+
+        loadNames() {
+          try {
+            this.knownNames = JSON.parse(localStorage.getItem('planner_names') || '[]');
+          } catch { this.knownNames = []; }
+        },
+
+        saveName(name) {
+          if (!name || this.knownNames.includes(name)) return;
+          this.knownNames.push(name);
+          this.knownNames.sort();
+          localStorage.setItem('planner_names', JSON.stringify(this.knownNames));
+        },
+
+        savePhoneName(phone, name) {
+          if (!phone || !name) return;
+          try {
+            const map = JSON.parse(localStorage.getItem('planner_phone_names') || '{}');
+            const digits = phone.replace(/\D/g, '').slice(-10);
+            const existing = map[digits] || [];
+            if (!existing.includes(name)) {
+              existing.push(name);
+            }
+            map[digits] = existing;
+            localStorage.setItem('planner_phone_names', JSON.stringify(map));
+          } catch {}
+        },
+
+        removeName(name) {
+          this.knownNames = this.knownNames.filter(n => n !== name);
+          localStorage.setItem('planner_names', JSON.stringify(this.knownNames));
+        },
+
+        switchTab(id) {
+          this.activeTab = id;
+          this.loadTasks();
+          setTimeout(() => this.updateTimeLine(), 100);
+        },
+
+        addTab() {
+          const name = prompt('Название вкладки:');
+          if (!name || !name.trim()) return;
+          const id = 'tab_' + Date.now();
+          this.tabs.push({ id, name: name.trim() });
+          this.saveTabs();
+          this.switchTab(id);
+        },
+
+        renameTab(tab) {
+          const name = prompt('Новое название:', tab.name);
+          if (!name || !name.trim()) return;
+          tab.name = name.trim();
+          this.saveTabs();
+        },
+
+        deleteTab(id) {
+          if (this.tabs.length <= 1) return;
+          if (!confirm('Удалить вкладку со всеми задачами?')) return;
+          this.tabs = this.tabs.filter(t => t.id !== id);
+          const allTasks = JSON.parse(localStorage.getItem('planner_all_tasks') || '{}');
+          delete allTasks[id];
+          localStorage.setItem('planner_all_tasks', JSON.stringify(allTasks));
+          this.saveTabs();
+          if (this.activeTab === id) {
+            this.switchTab(this.tabs[0].id);
+          }
+        },
+      };
+    }
+  </script>
+</body>
+</html>
