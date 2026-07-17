@@ -157,6 +157,10 @@
                               :class="isOverdue(task) ? 'text-red-600 font-bold' : 'opacity-50'"
                               x-text="fmtDeadline(task.deadline)"></span>
                       </template>
+                      <template x-if="task.carMake || task.carModel">
+                        <span class="text-[9px] block opacity-60"
+                              x-text="(task.carMake || '') + ' ' + (task.carModel || '') + (task.carYear ? ' ' + task.carYear : '')"></span>
+                      </template>
                     </div>
                   </template>
                   <template x-if="getTasks(day.dateStr, hour).length > 2">
@@ -196,6 +200,9 @@
       <button @click="showNamesList = !showNamesList" class="hover:text-gray-600 transition-colors">
         Имена (<span x-text="knownNames.length"></span>)
       </button>
+      <button @click="showClientsList = !showClientsList" class="hover:text-gray-600 transition-colors">
+        Клиенты (<span x-text="clients.length"></span>)
+      </button>
     </div>
   </div>
 
@@ -221,6 +228,50 @@
       </div>
     </div>
   </template>
+
+  <!-- Clients list -->
+  <template x-if="showClientsList">
+    <div class="max-w-6xl mx-auto px-4 mb-3">
+      <div class="bg-white rounded-xl border border-gray-200 p-3">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs text-gray-500 font-medium">База клиентов</span>
+          <button @click="showClientsList=false" class="text-gray-400 hover:text-gray-600 text-xs">закрыть</button>
+        </div>
+        <template x-if="clients.length === 0">
+          <span class="text-xs text-gray-400">Пока пусто. Клиенты добавляются автоматически при сохранении задач с именем и телефоном.</span>
+        </template>
+        <div class="max-h-80 overflow-y-auto divide-y divide-gray-50">
+          <template x-for="c in clients" :key="c.id">
+            <div class="py-2.5 px-1 flex items-start gap-3 group">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-medium text-gray-900" x-text="c.name || 'Без имени'"></span>
+                  <span class="text-xs text-gray-400" x-text="c.phone"></span>
+                </div>
+                <template x-if="c.cars.length > 0">
+                  <div class="mt-1 flex flex-wrap gap-1">
+                    <template x-for="car in c.cars" :key="car.make+car.model+car.year">
+                      <span class="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded"
+                            x-text="(car.make || '') + ' ' + (car.model || '') + (car.year ? ' ' + car.year : '') + (car.plate ? ' [' + car.plate + ']' : '')"></span>
+                    </template>
+                  </div>
+                </template>
+              </div>
+              <button @click="fillFromClient(c); showClientsList=false"
+                      class="text-[10px] text-blue-500 hover:text-blue-700 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                Заполнить
+              </button>
+              <button @click="deleteClient(c.id)"
+                      class="text-[10px] text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                &times;
+              </button>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+  </template>
+
   <template x-if="searchQuery.trim() && searchResults().length > 0">
     <div class="max-w-6xl mx-auto px-4 mb-4">
       <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -300,10 +351,32 @@
         </div>
         <input type="text" x-model="formNote" placeholder="Примечание"
                class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400 mb-3">
+        <!-- Car fields -->
+        <div class="mb-3 p-2.5 border border-gray-200 rounded-xl bg-gray-50/50">
+          <div class="text-[11px] font-medium text-gray-500 mb-2">Автомобиль</div>
+          <div class="grid grid-cols-2 gap-2 mb-2">
+            <input type="text" x-model="formCarMake" placeholder="Марка (Toyota)"
+                   class="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-gray-400">
+            <input type="text" x-model="formCarModel" placeholder="Модель (Camry)"
+                   class="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-gray-400">
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <input type="text" x-model="formCarYear" placeholder="Год"
+                   class="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-gray-400">
+            <input type="text" x-model="formCarPlate" placeholder="Госномер"
+                   class="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-gray-400 uppercase">
+            <input type="text" x-model="formCarVin" placeholder="VIN"
+                   class="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-gray-400 uppercase">
+          </div>
+        </div>
         <template x-if="formHistory">
-          <div class="mb-3 p-2.5 bg-gray-50 border border-gray-200 rounded-xl">
-            <div class="text-[11px] font-medium text-gray-500 mb-1">Предыдущие записи:</div>
-            <div class="text-xs text-gray-600 whitespace-pre-line" x-text="formHistory"></div>
+          <div class="mb-3 border border-gray-200 rounded-xl overflow-hidden">
+            <button type="button" @click="historyExpanded = !historyExpanded"
+                    class="w-full px-2.5 py-1.5 flex items-center justify-between text-[11px] font-medium text-gray-500 hover:bg-gray-50">
+              <span>Предыдущие записи (<span x-text="formHistory.split('\n').length"></span>)</span>
+              <span x-text="historyExpanded ? '▲' : '▼'" class="text-[10px]"></span>
+            </button>
+            <div x-show="historyExpanded" x-collapse class="px-2.5 pb-2 text-xs text-gray-600 whitespace-pre-line bg-gray-50/50" x-text="formHistory"></div>
           </div>
         </template>
         <input type="text" x-model="formExtra" placeholder="Доп. информация"
@@ -364,6 +437,11 @@
         formExtra: '',
         formDeadline: '',
         formHistory: '',
+        formCarMake: '',
+        formCarModel: '',
+        formCarYear: '',
+        formCarPlate: '',
+        formCarVin: '',
         formDay: '',
         formHour: 10,
         weekOffset: 0,
@@ -388,6 +466,7 @@
         init() {
           this.loadTabs();
           this.loadNames();
+          this.loadClients();
           this.darkMode = localStorage.getItem('planner_dark') === 'true';
           this.applyDark();
           this.calcWeek();
@@ -502,6 +581,11 @@
           this.formExtra = task ? (task.extra || '') : '';
           this.formDeadline = task ? (task.deadline || '') : '';
           this.formHistory = '';
+          this.formCarMake = task ? (task.carMake || '') : '';
+          this.formCarModel = task ? (task.carModel || '') : '';
+          this.formCarYear = task ? (task.carYear || '') : '';
+          this.formCarPlate = task ? (task.carPlate || '') : '';
+          this.formCarVin = task ? (task.carVin || '') : '';
           if (task && task.phone) {
             this.$nextTick(() => this.findPreviousByPhone(task.phone));
           }
@@ -524,6 +608,12 @@
           this.formExtra = '';
           this.formDeadline = '';
           this.formHistory = '';
+          this.historyExpanded = false;
+          this.formCarMake = '';
+          this.formCarModel = '';
+          this.formCarYear = '';
+          this.formCarPlate = '';
+          this.formCarVin = '';
         },
 
         saveTask() {
@@ -537,6 +627,11 @@
             note: this.formNote.trim(),
             extra: this.formExtra.trim(),
             deadline: this.formDeadline,
+            carMake: this.formCarMake.trim(),
+            carModel: this.formCarModel.trim(),
+            carYear: this.formCarYear.trim(),
+            carPlate: this.formCarPlate.trim().toUpperCase(),
+            carVin: this.formCarVin.trim().toUpperCase(),
           };
           if (this.editingTask) {
             Object.assign(this.editingTask, data);
@@ -551,6 +646,7 @@
           this.persist();
           if (data.name) this.saveName(data.name);
           if (data.phone && data.name) this.savePhoneName(data.phone, data.name);
+          if (data.phone) this.saveClient(data);
           this.closeModal();
         },
 
@@ -571,6 +667,9 @@
         knownNames: [],
         showNamesList: false,
         darkMode: false,
+        historyExpanded: false,
+        clients: [],
+        showClientsList: false,
 
         dragStart(e, task) {
           this._dragTask = task;
@@ -670,6 +769,21 @@
                 this.formName = names[names.length - 1];
               }
             } catch {}
+          }
+          // Auto-fill car info from clients database
+          if (!this.formCarMake && !this.formCarModel) {
+            const client = this.clients.find(c => {
+              const cDigits = (c.phone || '').replace(/\D/g, '').slice(-10);
+              return cDigits === digits.slice(-10);
+            });
+            if (client && client.cars.length > 0) {
+              const car = client.cars[client.cars.length - 1];
+              this.formCarMake = car.make || '';
+              this.formCarModel = car.model || '';
+              this.formCarYear = car.year || '';
+              this.formCarPlate = car.plate || '';
+              this.formCarVin = car.vin || '';
+            }
           }
           // Search all tasks (all tabs) for this phone
           let allTasks = [...this.tasks];
@@ -865,6 +979,61 @@
         removeName(name) {
           this.knownNames = this.knownNames.filter(n => n !== name);
           localStorage.setItem('planner_names', JSON.stringify(this.knownNames));
+        },
+
+        loadClients() {
+          try {
+            this.clients = JSON.parse(localStorage.getItem('planner_clients') || '[]');
+          } catch { this.clients = []; }
+        },
+
+        saveClient(client) {
+          const existing = this.clients.find(c => c.phone === client.phone);
+          if (existing) {
+            existing.name = client.name || existing.name;
+            existing.email = client.email || existing.email;
+            // Add car if not already there
+            if (client.carMake || client.carModel) {
+              const carKey = `${client.carMake}|${client.carModel}|${client.carYear}`;
+              const carExists = existing.cars.some(c => `${c.make}|${c.model}|${c.year}` === carKey);
+              if (!carExists) {
+                existing.cars.push({ make: client.carMake, model: client.carModel, year: client.carYear, plate: client.carPlate, vin: client.carVin });
+              } else {
+                // Update plate/vin if provided
+                const car = existing.cars.find(c => `${c.make}|${c.model}|${c.year}` === carKey);
+                if (client.carPlate && car) car.plate = client.carPlate;
+                if (client.carVin && car) car.vin = client.carVin;
+              }
+            }
+          } else {
+            this.clients.push({
+              id: Date.now(),
+              name: client.name || '',
+              phone: client.phone || '',
+              email: client.email || '',
+              cars: (client.carMake || client.carModel) ? [{ make: client.carMake, model: client.carModel, year: client.carYear, plate: client.carPlate, vin: client.carVin }] : [],
+              createdAt: new Date().toISOString(),
+            });
+          }
+          localStorage.setItem('planner_clients', JSON.stringify(this.clients));
+        },
+
+        deleteClient(id) {
+          this.clients = this.clients.filter(c => c.id !== id);
+          localStorage.setItem('planner_clients', JSON.stringify(this.clients));
+        },
+
+        fillFromClient(client) {
+          this.formName = client.name || '';
+          this.formPhone = client.phone || '';
+          if (client.cars.length > 0) {
+            const car = client.cars[client.cars.length - 1];
+            this.formCarMake = car.make || '';
+            this.formCarModel = car.model || '';
+            this.formCarYear = car.year || '';
+            this.formCarPlate = car.plate || '';
+            this.formCarVin = car.vin || '';
+          }
         },
 
         switchTab(id) {
