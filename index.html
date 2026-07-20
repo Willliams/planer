@@ -627,6 +627,7 @@ createApp({
       this.formCarVin = task ? (task.carVin || '') : '';
       this.formConsent = task ? !!task.consent : false;
       this.showModal = true;
+      this.$nextTick(() => { const el = document.querySelector('textarea'); if (el) el.focus(); });
       if (task && task.phone) this.findPreviousByPhone(task.phone.replace(/\D/g,''));
     },
     closeModal() {
@@ -642,7 +643,7 @@ createApp({
       if (!this.formText.trim()) return;
       const data = {
         text: this.formText.trim(), status: this.formStatus, color: this.formColor,
-        name: this.formName.trim(), phone: this.formPhone.trim(),
+        name: this.formName.trim(), phone: this.formatPhoneRaw(this.formPhone.replace(/\D/g, '')),
         note: this.formNote.trim(), extra: this.formExtra.trim(),
         deadline: this.formDeadlineDate + (this.formDeadlineTime ? 'T' + this.formDeadlineTime : ''),
         consent: this.formConsent,
@@ -737,6 +738,13 @@ createApp({
       const raw = val.replace(/\D/g, '');
       this.formPhone = this.formatPhoneRaw(raw);
       if (raw.length >= 10) this.findPreviousByPhone(raw);
+    },
+    formatPhone() {
+      const raw = this.formPhone.replace(/\D/g, '');
+      if (raw.length >= 10) {
+        this.formPhone = this.formatPhoneRaw(raw);
+        this.findPreviousByPhone(raw);
+      }
     },
     checkPhone(val) {
       const raw = val.replace(/\D/g, '');
