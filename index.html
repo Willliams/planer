@@ -332,9 +332,9 @@
         <!-- Quick fields: name, phone -->
         <div class="grid grid-cols-2 gap-2 mb-2">
           <input type="text" v-model="formName" placeholder="Имя" class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-400">
-          <input type="tel" v-model="formPhone" placeholder="Телефон"
-                 @blur="formatPhone()"
-                 @input="checkPhone($event.target.value)"
+          <input type="tel" v-model="formPhone" placeholder="Телефон" x-ref="phoneInput"
+                 @input="onPhoneInput($event.target.value)"
+                 @blur="onPhoneBlur()"
                  class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-400">
         </div>
         <!-- Quick: car make + model -->
@@ -392,6 +392,32 @@
               <option value="">без времени</option>
               <option v-for="t in deadlineTimes" :key="t" :value="t" v-text="t"></option>
             </select>
+          </div>
+          <!-- Reminder -->
+          <div class="mb-2 p-2.5 border border-gray-200 rounded-lg overflow-hidden">
+            <button type="button" @click="reminderExpanded = !reminderExpanded"
+                    class="w-full px-0 flex items-center justify-between text-[11px] font-medium text-gray-500 hover:text-gray-700">
+              <span>Напоминание</span>
+              <span v-text="reminderExpanded ? '▲' : '▼'" class="text-[10px]"></span>
+            </button>
+            <div v-show="reminderExpanded" class="mt-2 space-y-1.5">
+              <input type="text" v-model="reminderTitle" placeholder="Текст напоминания"
+                     class="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-gray-400">
+              <div class="grid grid-cols-2 gap-2">
+                <input type="date" v-model="reminderDate"
+                       class="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-gray-400">
+                <select v-model="reminderTime"
+                        class="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-gray-400 bg-white">
+                  <option value="">время</option>
+                  <option v-for="t in deadlineTimes" :key="t" :value="t" v-text="t"></option>
+                </select>
+              </div>
+              <button type="button" @click="createReminder()"
+                      :disabled="!reminderTitle || !reminderDate"
+                      class="w-full px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                + Создать напоминание
+              </button>
+            </div>
           </div>
           <!-- Consent -->
           <div class="mb-2 p-2 border border-gray-200 rounded-lg bg-gray-50/50">
@@ -505,6 +531,7 @@ createApp({
       formName: '', formPhone: '', formNote: '', formExtra: '',
       formDeadline: '', formDeadlineDate: '', formDeadlineTime: '',
       deadlineTimes: [], formConsent: false, expandedForm: false,
+      reminderTitle: '', reminderDate: '', reminderTime: '', reminderExpanded: false,
       tooltipTask: null, tooltipX: 0, tooltipY: 0,
       formHistory: '', historyRecords: [],
       showHistoryDetail: false, historyDetailTask: null, historyDetailIndex: 0,
@@ -643,7 +670,7 @@ createApp({
       if (!this.formText.trim()) return;
       const data = {
         text: this.formText.trim(), status: this.formStatus, color: this.formColor,
-        name: this.formName.trim(), phone: this.formatPhoneRaw(this.formPhone.replace(/\D/g, '')),
+        name: this.formName.trim(), phone: this._formatPhoneForSave(),
         note: this.formNote.trim(), extra: this.formExtra.trim(),
         deadline: this.formDeadlineDate + (this.formDeadlineTime ? 'T' + this.formDeadlineTime : ''),
         consent: this.formConsent,
@@ -673,6 +700,25 @@ createApp({
     },
     deleteTask() { if (!this.editingTask) return; this.tasks = this.tasks.filter(t => t.id !== this.editingTask.id); this.persist(); this.closeModal(); },
 
+    createReminder() {
+      if (!this.reminderTitle || !this.reminderDate) return;
+      this.tasks.push({
+        id: Date.now(), day: this.reminderDate,
+        hour: this.reminderTime ? parseInt(this.reminderTime.split(':')[0]) : 10,
+        text: this.reminderTitle.trim(), status: 'todo', color: 'blue',
+        name: this.formName || '', phone: this.formPhone || '',
+        note: 'Напоминание', extra: '', deadline: '',
+        carMake: this.formCarMake || '', carModel: this.formCarModel || '',
+        carYear: this.formCarYear || '', carPlate: this.formCarPlate || '',
+        carMileage: this.formCarMileage || '', carVin: this.formCarVin || '',
+        createdAt: new Date().toISOString(),
+      });
+      this.persist();
+      this.reminderTitle = '';
+      this.reminderDate = '';
+      this.reminderTime = '';
+    },
+
     // ─── Autofill ───
     autofillFromText() {
       const t = this.formText;
@@ -683,9 +729,13 @@ createApp({
 
       // Phone
       const phoneMatch = t.match(/(?:\+?7|8)[\s\-\(\)]*(\d[\s\-\(\)]*){8,11}/);
-      if (phoneMatch && !this.formPhone) {
+      if (phoneMatch) {
         const raw = phoneMatch[0].replace(/\D/g, '');
-        if (raw.length >= 10) { this.formPhone = this.formatPhoneRaw(raw); this.onPhoneInput(this.formPhone); }
+        if (raw.length >= 10) {
+          this._rawDigits = raw;
+          this.formPhone = this._fmtDigits(raw);
+          this.findPreviousByPhone(raw);
+        }
       }
 
       // Make
@@ -728,27 +778,28 @@ createApp({
     },
 
     // ─── Phone ───
-    formatPhoneRaw(raw) {
-      const d = raw.replace(/\D/g, '');
-      if (d.length < 10) return raw;
-      const full = d.length >= 11 ? d.slice(-11) : '7' + d.slice(-10);
-      return `+7 (${full.slice(1,4)}) ${full.slice(4,7)}-${full.slice(7,9)}-${full.slice(9,11)}`;
-    },
+    _rawDigits: '',
     onPhoneInput(val) {
-      const raw = val.replace(/\D/g, '');
-      this.formPhone = this.formatPhoneRaw(raw);
-      if (raw.length >= 10) this.findPreviousByPhone(raw);
+      this._rawDigits = val.replace(/\D/g, '');
+      if (this._rawDigits.length >= 10) this.findPreviousByPhone(this._rawDigits);
     },
-    formatPhone() {
-      const raw = this.formPhone.replace(/\D/g, '');
-      if (raw.length >= 10) {
-        this.formPhone = this.formatPhoneRaw(raw);
-        this.findPreviousByPhone(raw);
+    onPhoneBlur() {
+      if (this._rawDigits.length >= 10) {
+        this.formPhone = this._fmtDigits(this._rawDigits);
       }
     },
-    checkPhone(val) {
-      const raw = val.replace(/\D/g, '');
-      if (raw.length >= 10) this.findPreviousByPhone(raw);
+    _fmtDigits(d) {
+      if (d.length < 10) return d;
+      const num = d.startsWith('8') ? d.slice(1) : d;
+      const p = num.slice(-10);
+      return `+7 (${p.slice(0,3)}) ${p.slice(3,6)}-${p.slice(6,8)}-${p.slice(8,10)}`;
+    },
+    _formatPhoneForSave() {
+      const raw = this._rawDigits || this.formPhone.replace(/\D/g, '');
+      if (raw.length < 10) return this.formPhone;
+      const num = raw.startsWith('8') ? raw.slice(1) : raw;
+      const p = num.slice(-10);
+      return `+7 (${p.slice(0,3)}) ${p.slice(3,6)}-${p.slice(6,8)}-${p.slice(8,10)}`;
     },
 
     // ─── Normalize ───
