@@ -5,103 +5,54 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Планировщик задач</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="vue.js"></script>
   <style>
-    [x-cloak] { display: none !important; }
-    /* Dark mode */
+    [v-cloak] { display: none !important; }
     .dark { color-scheme: dark; }
     .dark body, .dark { background: #111827; color: #e5e7eb; }
     .dark .bg-white { background: #1f2937; }
     .dark .bg-gray-50 { background: #111827; }
     .dark .bg-gray-100 { background: #374151; }
     .dark .border-gray-200, .dark .border-gray-100, .dark .border-gray-50 { border-color: #374151; }
-    .dark .text-gray-900, .dark .text-gray-800 { color: #f3f4f6; }
+    .dark .text-gray-900 { color: #f3f4f6; }
     .dark .text-gray-700, .dark .text-gray-600 { color: #d1d5db; }
     .dark .text-gray-500, .dark .text-gray-400 { color: #9ca3af; }
-    .dark .text-gray-300 { color: #6b7280; }
-    .dark .hover\:bg-gray-50:hover { background: #374151; }
-    .dark .hover\:bg-gray-100:hover { background: #374151; }
-    .dark .hover\:bg-gray-200:hover { background: #4b5563; }
+    .dark input, .dark textarea, .dark select { background: #374151; border-color: #4b5563; color: #f3f4f6; }
+    .dark input::placeholder, .dark textarea::placeholder { color: #6b7280; }
     .dark tr.bg-gray-50\/70 { background: rgba(55,65,81,0.5); }
     .dark tr.bg-white { background: #1f2937; }
-    .dark .sticky { background: #1f2937; }
-    .dark input, .dark textarea { background: #374151; border-color: #4b5563; color: #f3f4f6; }
-    .dark input::placeholder, .dark textarea::placeholder { color: #6b7280; }
-    .dark .task-chip { border-color: #4b5563; }
-    .dark .rounded-xl { border-color: #374151; }
-    .dark .bg-blue-50 { background: rgba(59,130,246,0.15); }
-    .dark .bg-gray-50\/70 { background: rgba(55,65,81,0.5); }
-    .dark .shadow-sm, .dark .shadow-xl { box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+    .task-chip { display: block; width: 100%; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; position: relative; font-size: 10px; line-height: 1.2; padding: 1px 4px; border-radius: 3px; max-height: 14px; }
+    .cell { position: relative; overflow: hidden; cursor: pointer; padding: 1px !important; max-height: 38px; word-break: break-all; }
+    .cell:hover { background: rgba(0,0,0,0.02); }
+    .cell-tasks { display: flex; flex-direction: column; gap: 0px; overflow: hidden; }
+    .task-tooltip { position: fixed; z-index: 9999; width: 220px; padding: 8px 10px; background: #1f2937; color: #e5e7eb; border-radius: 8px; font-size: 11px; line-height: 1.4; box-shadow: 0 4px 12px rgba(0,0,0,0.25); pointer-events: none; white-space: normal; }
+    @keyframes blink-highlight { 0%,100%{background-color:transparent} 50%{background-color:rgba(59,130,246,0.25)} }
+    .blink-cell { animation: blink-highlight 0.5s ease-in-out 6 !important; }
     .date-picker-wrap { position: relative; }
     .date-picker-wrap input[type="date"] { color: transparent; width: 100%; height: 38px; }
-    .date-picker-wrap input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: pointer; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); }
+    .date-picker-wrap input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: pointer; position: absolute; right: 8px; }
     .date-picker-wrap .date-label { position: absolute; left: 12px; top: 0; bottom: 0; display: flex; align-items: center; font-size: 0.875rem; color: #6b7280; pointer-events: none; z-index: 2; }
-    .dark .date-picker-wrap .date-label { color: #9ca3af; }
-    @keyframes blink-highlight {
-      0%, 100% { background-color: transparent; }
-      50% { background-color: rgba(59,130,246,0.25); }
-    }
-    .blink-cell { animation: blink-highlight 0.5s ease-in-out 6 !important; }
-    .grid-table table { table-layout: fixed; }
-    .grid-table col.time-col { width: 60px; }
-    .grid-table col.day-col { }
-    .task-chip {
-      display: block;
-      width: 100%;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      position: relative;
-      font-size: 10px;
-      line-height: 1.2;
-      padding: 1px 4px;
-      border-radius: 3px;
-    }
-    .task-chip:hover { opacity: 0.85; }
-    .task-tooltip {
-      position: fixed;
-      z-index: 9999;
-      width: 220px;
-      padding: 8px 10px;
-      background: #1f2937;
-      color: #e5e7eb;
-      border-radius: 8px;
-      font-size: 11px;
-      line-height: 1.4;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-      pointer-events: none;
-      white-space: normal;
-    }
-    .dark .task-tooltip { background: #374151; color: #f3f4f6; }
-    .cell { position: relative; overflow: hidden; cursor: pointer; padding: 2px !important; }
-    .cell:hover { background: rgba(0,0,0,0.02); }
-    .cell-tasks { display: flex; flex-direction: column; gap: 1px; overflow: hidden; min-height: 0; max-height: 48px; }
-    @media (max-width: 768px) {
-    .grid-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .grid-table { min-width: 650px; }
-    }
+    @media (max-width: 768px) { .grid-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; } .grid-table { min-width: 650px; } }
   </style>
 </head>
-<body class="bg-gray-50 min-h-screen" x-data="planner()" x-init="init()">
-
+<body class="bg-gray-50 min-h-screen">
+<div id="app" v-cloak>
   <!-- Header -->
   <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
       <h1 class="text-lg font-bold text-gray-900 hidden sm:block">Планировщик</h1>
       <div class="relative flex-1 max-w-xs">
-        <input type="text" x-model="searchQuery" placeholder="Поиск..."
+        <input type="text" v-model="searchQuery" placeholder="Поиск..."
                class="w-full pl-8 pr-7 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-400">
         <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-        <button x-show="searchQuery" @click="searchQuery=''" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs">&times;</button>
+        <button v-show="searchQuery" @click="searchQuery=''" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs">&times;</button>
       </div>
       <div class="flex items-center gap-2">
         <button @click="prevWeek()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-600">&larr;</button>
         <button @click="goToday()" class="px-3 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-sm font-medium text-gray-700">Сегодня</button>
         <button @click="nextWeek()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-600">&rarr;</button>
-        <span class="ml-2 text-sm text-gray-500 hidden sm:inline" x-text="weekLabel()"></span>
-        <button @click="toggleDark()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-lg" x-text="darkMode ? '☀️' : '🌙'"></button>
+        <span class="ml-2 text-sm text-gray-500 hidden sm:inline" v-text="weekLabel()"></span>
+        <button @click="toggleDark()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-lg" v-text="darkMode ? '☀️' : '🌙'"></button>
       </div>
     </div>
   </header>
@@ -109,18 +60,15 @@
   <!-- Tabs -->
   <div class="bg-white border-b border-gray-200">
     <div class="max-w-6xl mx-auto px-4 flex items-center gap-1 overflow-x-auto py-1">
-      <template x-for="(tab, ti) in tabs" :key="tab.id">
-        <div class="flex items-center group shrink-0"
-             :class="activeTab===tab.id ? 'border-b-2 border-gray-900' : ''">
-          <button @click="switchTab(tab.id)"
-                  class="px-3 py-1.5 text-sm font-medium transition-colors"
-                  :class="activeTab===tab.id ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600'"
-                  x-text="tab.name"></button>
-          <button @click="renameTab(tab)" class="text-gray-300 hover:text-gray-500 text-xs hidden group-hover:inline transition-colors">&#9998;</button>
-          <button @click="deleteTab(tab.id)" class="text-gray-300 hover:text-red-400 text-xs hidden group-hover:inline transition-colors ml-0.5"
-                  x-show="tabs.length > 1">&times;</button>
-        </div>
-      </template>
+      <div v-for="(tab, ti) in tabs" :key="tab.id" class="flex items-center group shrink-0"
+           :class="activeTab===tab.id ? 'border-b-2 border-gray-900' : ''">
+        <button @click="switchTab(tab.id)" class="px-3 py-1.5 text-sm font-medium transition-colors"
+                :class="activeTab===tab.id ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600'"
+                v-text="tab.name"></button>
+        <button @click="renameTab(tab)" class="text-gray-300 hover:text-gray-500 text-xs hidden group-hover:inline transition-colors">&#9998;</button>
+        <button @click="deleteTab(tab.id)" class="text-gray-300 hover:text-red-400 text-xs hidden group-hover:inline transition-colors ml-0.5"
+                v-show="tabs.length > 1">&times;</button>
+      </div>
       <button @click="addTab()" class="shrink-0 w-6 h-6 flex items-center justify-center text-gray-300 hover:text-gray-600 text-lg rounded hover:bg-gray-100 transition-colors">+</button>
     </div>
   </div>
@@ -128,89 +76,63 @@
   <!-- Grid -->
   <div class="max-w-6xl mx-auto px-4 py-4 grid-scroll">
     <div class="bg-white rounded-xl border border-gray-200 overflow-hidden grid-table relative">
-      <!-- Current time line -->
-      <div x-show="timeLine.visible"
-           class="absolute left-0 right-0 z-20 pointer-events-none"
-           :style="'top:'+timeLine.top+'px'">
+      <div v-show="timeLine.visible" class="absolute left-0 right-0 z-20 pointer-events-none" :style="'top:'+timeLine.top+'px'">
         <div class="border-t border-dashed border-red-300"></div>
       </div>
-      <table class="w-full border-collapse">
+      <table class="w-full border-collapse table-fixed">
         <thead>
           <tr>
             <th class="w-16 md:w-20 p-2 text-xs text-gray-400 font-normal border-b border-r border-gray-100"></th>
-            <template x-for="(day, di) in days" :key="di">
-                <td class="p-2 text-center border-b border-r border-gray-100 last:border-r-0"
-                  :class="isToday(day.date) ? '!border-b-4 !border-b-blue-400' : ''">
-                <div class="text-xs font-medium" :class="isToday(day.date) ? 'text-blue-600' : 'text-gray-500'" x-text="day.short"></div>
-                <div class="text-lg font-bold" :class="isToday(day.date) ? 'text-blue-600' : 'text-gray-900'" x-text="day.num"></div>
-              </th>
-            </template>
+            <th v-for="(day, di) in days" :key="di" class="p-2 text-center border-b border-r border-gray-100 last:border-r-0"
+                :class="isToday(day.date) ? '!border-b-4 !border-b-blue-400' : ''">
+              <div class="text-xs font-medium" :class="isToday(day.date) ? 'text-blue-600' : 'text-gray-500'" v-text="day.short"></div>
+              <div class="text-lg font-bold" :class="isToday(day.date) ? 'text-blue-600' : 'text-gray-900'" v-text="day.num"></div>
+            </th>
             <th class="w-8 border-b border-r border-gray-100">
               <button @click="toggleSunday()" class="w-full h-full flex items-center justify-center text-gray-300 hover:text-gray-600 text-lg"
-                      :class="showSunday ? 'text-blue-400' : ''" x-text="showSunday ? '−' : '+'"></button>
+                      :class="showSunday ? 'text-blue-400' : ''" v-text="showSunday ? '−' : '+'"></button>
             </th>
           </tr>
         </thead>
         <tbody>
-          <template x-for="(hour, hi) in hours" :key="hour">
-            <tr :class="hi % 2 === 0 ? 'bg-white' : 'bg-gray-50/70'" style="height:52px">
-              <td class="p-1 text-[11px] text-gray-400 text-right pr-2 border-r border-b border-gray-100 align-top pt-2"
-                  x-text="hour + ':00'"></td>
-              <template x-for="(day, di) in days" :key="di">
-                <td class="border-b border-r border-gray-50 last:border-r-0 p-1 align-top min-h-[52px] cell"
-                    :data-day="day.dateStr" :data-hour="hour"
-                    @dragover.prevent="$el.classList.add('bg-blue-50')"
-                    @dragleave="$el.classList.remove('bg-blue-50')"
-                    @drop.prevent="$el.classList.remove('bg-blue-50'); dropTask(day.dateStr, hour)"
-                    @click="$event.target === $el && openModal(day.dateStr, hour)">
-                  <div class="cell-tasks">
-                  <template x-for="task in getTasks(day.dateStr, hour).slice(0, expandedCells[day.dateStr+':'+hour] ? 99 : 2)" :key="task.id">
-                    <div class="task-chip rounded border group"
-                         :style="taskStyle(task)"
-                         draggable="true"
-                         :data-task-id="task.id"
-                         @dragstart="dragStart($event, task)"
-                         @mouseenter="positionTooltip($event, true)"
-                         @mouseleave="positionTooltip($event, false)"
-                         @click.stop="openModal(day.dateStr, hour, task)">
-                      <div class="flex items-center gap-0.5">
-                        <button class="flex-shrink-0 w-3 h-3 rounded border border-gray-400 bg-white flex items-center justify-center text-[9px] leading-none text-gray-700"
-                                @click.stop="toggleStatus(task)"
-                                x-text="task.status==='done' ? '✓' : ''"></button>
-                        <span x-text="task.text" class="overflow-hidden text-ellipsis"
-                              :class="task.status==='done' ? 'line-through opacity-50' : ''"></span>
-                      </div>
-                      <template x-if="task.deadline && !task.name && !task.phone">
-                        <span class="text-[9px] block"
-                              :class="isOverdue(task) ? 'text-red-600 font-bold' : 'opacity-50'"
-                              x-text="fmtDeadline(task.deadline)"></span>
-                      </template>
-                      <template x-if="task.carMake || task.carModel">
-                        <span class="text-[9px] block opacity-60 truncate"
-                              x-text="(task.carMake || '') + ' ' + (task.carModel || '')"></span>
-                      </template>
-                      <span class="text-[8px] block opacity-0 group-hover:opacity-40 transition-opacity"
-                            x-text="task.createdAt ? fmtCreatedAt(task.createdAt) : ''"></span>
+          <tr v-for="(hour, hi) in hours" :key="hour" :class="hi % 2 === 0 ? 'bg-white' : 'bg-gray-50/70'" style="height:40px">
+            <td class="p-1 text-[11px] text-gray-400 text-right pr-2 border-r border-b border-gray-100 align-top pt-2" v-text="hour + ':00'"></td>
+            <td v-for="(day, di) in days" :key="di" class="border-b border-r border-gray-50 last:border-r-0 p-1 align-top min-h-[52px] cell"
+                :data-day="day.dateStr" :data-hour="hour"
+                @dragover.prevent="$event.currentTarget.classList.add('bg-blue-50')"
+                @dragleave="$event.currentTarget.classList.remove('bg-blue-50')"
+                @drop.prevent="$event.currentTarget.classList.remove('bg-blue-50'); dropTask(day.dateStr, hour)"
+                @click="handleCellClick($event, day.dateStr, hour)">
+              <div class="cell-tasks">
+                <template v-for="task in getTasks(day.dateStr, hour).slice(0, expandedCells[day.dateStr+':'+hour] ? 99 : 2)" :key="task.id">
+                  <div class="task-chip rounded border group"
+                       :style="taskStyle(task)"
+                       draggable="true"
+                       @dragstart="dragStart($event, task)"
+                       @mouseenter="showTooltip($event, task)"
+                       @mouseleave="tooltipTask = null"
+                       @click.stop="openModal(day.dateStr, hour, task)">
+                    <div class="flex items-center gap-0.5">
+                      <button class="flex-shrink-0 w-3 h-3 rounded border border-gray-400 bg-white flex items-center justify-center text-[9px] leading-none text-gray-700"
+                              @click.stop="toggleStatus(task)"
+                              v-text="task.status==='done' ? '✓' : ''"></button>
+                      <span v-text="task.text" class="overflow-hidden text-ellipsis"
+                            :class="task.status==='done' ? 'line-through opacity-50' : ''"></span>
                     </div>
-                      <template x-if="task.consent">
-                        <span class="text-[8px] block text-green-600">✓ согласие</span>
-                      </template>
-                    </div>
-                  </template>
-                  <template x-if="getTasks(day.dateStr, hour).length > 2">
-                    <div class="text-[9px] text-gray-400 cursor-pointer hover:text-gray-600 font-medium"
-                         @click.stop="toggleExpand(day.dateStr+':'+hour)"
-                         x-text="expandedCells[day.dateStr+':'+hour] ? 'свернуть' : '+' + (getTasks(day.dateStr, hour).length - 2) + ' ещё'"></div>
-                  </template>
-                  <template x-if="getTasks(day.dateStr, hour).length > 0 && getTasks(day.dateStr, hour).length <= 2">
-                    <div class="text-[9px] text-gray-300 cursor-pointer hover:text-gray-500"
-                         @click.stop="openModal(day.dateStr, hour)">+</div>
-                  </template>
+                    <span v-if="task.carMake || task.carModel" class="text-[9px] block opacity-60 truncate"
+                          v-text="(task.carMake || '') + ' ' + (task.carModel || '')"></span>
+                    <span class="text-[8px] block opacity-0 group-hover:opacity-40 transition-opacity"
+                          v-text="task.createdAt ? fmtCreatedAt(task.createdAt) : ''"></span>
                   </div>
-                </td>
-              </template>
-            </tr>
-          </template>
+                </template>
+                <div v-if="getTasks(day.dateStr, hour).length > 2" class="text-[9px] text-gray-400 cursor-pointer hover:text-gray-600 font-medium"
+                     @click.stop="toggleExpand(day.dateStr+':'+hour)"
+                     v-text="expandedCells[day.dateStr+':'+hour] ? 'свернуть' : '+' + (getTasks(day.dateStr, hour).length - 2) + ' ещё'"></div>
+                <div v-if="getTasks(day.dateStr, hour).length > 0 && getTasks(day.dateStr, hour).length <= 2" class="text-[9px] text-gray-300 cursor-pointer hover:text-gray-500"
+                     @click.stop="openModal(day.dateStr, hour)">+</div>
+              </div>
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -221,128 +143,164 @@
     <div class="flex items-center gap-1.5">
       <span>Начало:</span>
       <button @click="addHourStart()" class="w-5 h-5 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 text-gray-500">+</button>
-      <span class="font-medium text-gray-600 w-8 text-center" x-text="hourStart+':00'"></span>
+      <span class="font-medium text-gray-600 w-8 text-center" v-text="hourStart+':00'"></span>
       <button @click="removeHourStart()" class="w-5 h-5 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 text-gray-500">−</button>
     </div>
     <div class="flex items-center gap-1.5">
       <span>Конец:</span>
       <button @click="addHourEnd()" class="w-5 h-5 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 text-gray-500">+</button>
-      <span class="font-medium text-gray-600 w-8 text-center" x-text="hourEnd+1+':00'"></span>
+      <span class="font-medium text-gray-600 w-8 text-center" v-text="hourEnd+1+':00'"></span>
       <button @click="removeHourEnd()" class="w-5 h-5 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 text-gray-500">−</button>
     </div>
     <div class="flex items-center gap-1.5 ml-auto">
       <button @click="showNamesList = !showNamesList" class="hover:text-gray-600 transition-colors">
-        Имена (<span x-text="knownNames.length"></span>)
+        Имена (<span v-text="knownNames.length"></span>)
       </button>
       <button @click="showClientsList = !showClientsList" class="hover:text-gray-600 transition-colors">
-        Клиенты (<span x-text="clients.length"></span>)
+        Клиенты (<span v-text="clients.length"></span>)
+      </button>
+      <button @click="showDictList = !showDictList" class="hover:text-gray-600 transition-colors">
+        Словарь (<span v-text="carDictionary.length"></span>)
       </button>
     </div>
   </div>
 
-  <!-- Known names list -->
-  <template x-if="showNamesList">
-    <div class="max-w-6xl mx-auto px-4 mb-3">
-      <div class="bg-white rounded-xl border border-gray-200 p-3">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-xs text-gray-500 font-medium">База имён</span>
-          <button @click="showNamesList=false" class="text-gray-400 hover:text-gray-600 text-xs">закрыть</button>
-        </div>
+  <!-- Names list -->
+  <div v-if="showNamesList" class="max-w-6xl mx-auto px-4 mb-3">
+    <div class="bg-white rounded-xl border border-gray-200 p-3">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs text-gray-500 font-medium">База имён (<span v-text="knownNames.length"></span>)</span>
+        <button @click="showNamesList=false" class="text-gray-400 hover:text-gray-600 text-xs">закрыть</button>
+      </div>
+      <div class="flex flex-wrap gap-1.5 mb-3">
+        <template v-for="(n, ni) in knownNames" :key="'n'+ni">
+          <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full">
+            <span v-text="n"></span>
+            <button @click="blockName(n)" class="text-gray-400 hover:text-orange-500 text-[10px]" title="Добавить в стоп-лист">–</button>
+            <button @click="knownNames.splice(ni,1); localStorage.setItem('planner_names',JSON.stringify(knownNames))" class="text-gray-400 hover:text-red-500 text-[10px]" title="Удалить">&times;</button>
+          </span>
+        </template>
+        <span v-if="knownNames.length===0" class="text-xs text-gray-400">Пока пусто</span>
+      </div>
+      <div v-if="blockedNames.length" class="border-t pt-2">
+        <div class="text-[10px] text-gray-400 mb-1">Стоп-лист (не ловятся как имя):</div>
         <div class="flex flex-wrap gap-1.5">
-          <template x-for="n in knownNames" :key="n">
-            <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full">
-              <span x-text="n"></span>
-              <button @click="removeName(n)" class="text-gray-400 hover:text-red-500 text-[10px]">&times;</button>
+          <template v-for="(b, bi) in blockedNames" :key="'b'+bi">
+            <span class="inline-flex items-center gap-1 bg-orange-50 text-orange-600 text-xs px-2 py-0.5 rounded-full">
+              <span v-text="b"></span>
+              <button @click="unblockName(bi)" class="text-orange-400 hover:text-red-500 text-[10px]">&times;</button>
             </span>
           </template>
-          <template x-if="knownNames.length === 0">
-            <span class="text-xs text-gray-400">Пока пусто. Имена добавляются автоматически при сохранении задач.</span>
-          </template>
         </div>
       </div>
     </div>
-  </template>
+  </div>
 
   <!-- Clients list -->
-  <template x-if="showClientsList">
-    <div class="max-w-6xl mx-auto px-4 mb-3">
-      <div class="bg-white rounded-xl border border-gray-200 p-3">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-xs text-gray-500 font-medium">База клиентов</span>
+  <div v-if="showClientsList" class="max-w-6xl mx-auto px-4 mb-3">
+    <div class="bg-white rounded-xl border border-gray-200 p-3">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs text-gray-500 font-medium">База клиентов (<span v-text="clients.length"></span>)</span>
+        <div class="flex items-center gap-2">
+          <input type="text" v-model="clientFilter" placeholder="Поиск..." class="px-2 py-1 border border-gray-200 rounded text-[11px] w-32 focus:outline-none focus:border-gray-400">
           <button @click="showClientsList=false" class="text-gray-400 hover:text-gray-600 text-xs">закрыть</button>
         </div>
-        <template x-if="clients.length === 0">
-          <span class="text-xs text-gray-400">Пока пусто. Клиенты добавляются автоматически при сохранении задач с именем и телефоном.</span>
-        </template>
-        <div class="max-h-80 overflow-y-auto divide-y divide-gray-50">
-          <template x-for="c in clients" :key="c.id">
-            <div class="py-2.5 px-1 flex items-start gap-3 group">
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2">
-                  <span class="text-sm font-medium text-gray-900" x-text="c.name || 'Без имени'"></span>
-                  <span class="text-xs text-gray-400" x-text="c.phone"></span>
+      </div>
+      <div class="max-h-80 overflow-y-auto">
+        <div v-for="c in filteredClients" :key="c.id">
+          <div class="py-1.5 px-1 flex items-center gap-1 text-[11px] group cursor-pointer hover:bg-gray-50 border-b border-gray-50"
+               @click="expandedClient = expandedClient === c.id ? null : c.id">
+            <span class="text-gray-400 text-[10px] shrink-0 w-3" v-text="expandedClient===c.id ? '▼' : '▶'"></span>
+            <span class="font-medium text-gray-900 shrink-0 min-w-[60px]" v-text="c.name || '—'"></span>
+            <span class="text-gray-500 shrink-0 min-w-[90px]" v-text="c.phone || '—'"></span>
+            <template v-if="c.cars && c.cars.length">
+              <span class="text-gray-700 shrink-0" v-text="c.cars[0].make || '—'"></span>
+              <span class="text-gray-700 shrink-0" v-text="c.cars[0].model || '—'"></span>
+              <span class="text-gray-400 shrink-0" v-text="c.cars[0].vin || '—'"></span>
+              <span class="text-gray-400 shrink-0 min-w-[65px] uppercase" v-text="c.cars[0].plate || '—'"></span>
+              <span class="text-gray-400 shrink-0" v-text="c.cars[0].mileage ? c.cars[0].mileage+' км' : '—'"></span>
+            </template>
+            <span v-else class="text-gray-400">— / — / — / —</span>
+            <span class="text-[10px] bg-blue-50 text-blue-600 px-1 py-0.5 rounded shrink-0 ml-auto" v-text="clientTaskCount(c)"></span>
+            <button @click.stop="fillFromClient(c); showClientsList=false" class="text-[10px] text-blue-500 hover:text-blue-700 opacity-0 group-hover:opacity-100 shrink-0">+</button>
+          </div>
+          <!-- Client task history -->
+          <div v-if="expandedClient === c.id" class="px-3 pb-2 bg-gray-50/50">
+            <template v-if="clientTasks(c).length > 0">
+              <div v-for="t in clientTasks(c)" :key="t.id"
+                   class="py-1.5 px-2 flex items-center gap-2 text-xs border-b border-gray-100 last:border-b-0 cursor-pointer hover:bg-white rounded"
+                   @click.stop="jumpToTask(t); showClientsList=false">
+                <button class="flex-shrink-0 w-3 h-3 rounded border border-gray-400 bg-white flex items-center justify-center text-[9px]"
+                        @click.stop="toggleStatus(t)" v-text="t.status==='done' ? '✓' : ''"></button>
+                <div class="flex-1 min-w-0">
+                  <span class="truncate" :class="t.status==='done'?'line-through opacity-50':''" v-text="t.text"></span>
+                  <span v-if="t.carMake || t.carModel" class="text-[10px] text-gray-400 ml-1"
+                        v-text="(t.carMake||'')+' '+(t.carModel||'')"></span>
                 </div>
-                <template x-if="c.cars.length > 0">
-                  <div class="mt-1 flex flex-wrap gap-1">
-                    <template x-for="car in c.cars" :key="car.vin || car.plate || car.make+car.model">
-                      <span class="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded"
-                            x-text="(car.make || '') + ' ' + (car.model || '') + (car.year ? ' ' + car.year : '') + (car.plate ? ' [' + car.plate + ']' : '') + (car.mileage ? ' ' + car.mileage + 'км' : '')"></span>
-                    </template>
-                  </div>
-                </template>
+                <span class="text-[10px] text-gray-400 shrink-0" v-text="fmtShortDate(t.day)"></span>
               </div>
-              <button @click="fillFromClient(c); showClientsList=false"
-                      class="text-[10px] text-blue-500 hover:text-blue-700 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                Заполнить
-              </button>
-              <button @click="sendConsentTelegram(c)"
-                      class="text-[10px] text-green-500 hover:text-green-700 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                Согласие
-              </button>
-              <button @click="deleteClient(c.id)"
-                      class="text-[10px] text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                &times;
-              </button>
-            </div>
-          </template>
+            </template>
+            <div v-else class="text-[10px] text-gray-400 py-1">Нет записей</div>
+          </div>
         </div>
+        <div v-if="clients.length===0" class="px-1 py-2 text-xs text-gray-400">Пока пусто</div>
       </div>
     </div>
-  </template>
+  </div>
 
-  <template x-if="searchQuery.trim()">
-    <div class="max-w-6xl mx-auto px-4 mb-4">
-      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div class="px-4 py-2 bg-gray-50 border-b text-sm text-gray-500 flex items-center justify-between">
-          <span>Результаты поиска: <strong x-text="searchResults().length"></strong></span>
-          <button @click="searchQuery=''" class="text-gray-400 hover:text-gray-600">Очистить</button>
+  <!-- Dictionary -->
+  <div v-if="showDictList" class="max-w-6xl mx-auto px-4 mb-3">
+    <div class="bg-white rounded-xl border border-gray-200 p-3">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-xs text-gray-500 font-medium">Словарь сокращений (<span v-text="carDictionary.length"></span>)</span>
+        <button @click="showDictList=false" class="text-gray-400 hover:text-gray-600 text-xs">закрыть</button>
+      </div>
+      <div class="flex gap-2 mb-3 items-end">
+        <select v-model="dictType" class="px-2 py-1.5 border border-gray-200 rounded-lg text-xs">
+          <option value="make">Марка</option>
+          <option value="model">Модель</option>
+        </select>
+        <input type="text" v-model="dictValue" placeholder="TOYOTA" class="flex-1 px-2 py-1.5 border border-gray-200 rounded-lg text-xs uppercase">
+        <input type="text" v-model="dictAliases" placeholder="тойота,тайота" class="flex-1 px-2 py-1.5 border border-gray-200 rounded-lg text-xs">
+        <button @click="addDictEntry()" :disabled="!dictValue||!dictAliases" class="px-3 py-1.5 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600 disabled:opacity-40">+</button>
+      </div>
+      <div v-if="dictValue && isDictDuplicate()" class="text-[10px] text-orange-500 mb-2">⚠ уже есть в словаре: <span v-text="dictValue.toUpperCase()"></span></div>
+      <div class="text-[10px] text-gray-400 mb-2">Сокращения через запятую</div>
+      <div class="max-h-60 overflow-y-auto divide-y divide-gray-50">
+        <div v-for="d in carDictionary" :key="d.id" class="flex items-center justify-between py-1.5 px-1 group">
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500" v-text="d.type==='make'?'Марка':'Модель'"></span>
+            <span class="text-xs font-medium text-gray-900" v-text="d.value"></span>
+            <span class="text-[10px] text-gray-400" v-text="d.aliases.join(', ')"></span>
+          </div>
+          <button @click="removeDictEntry(d.id)" class="text-gray-300 hover:text-red-500 text-xs opacity-0 group-hover:opacity-100">&times;</button>
         </div>
-        <template x-if="searchResults().length === 0">
-          <div class="px-4 py-6 text-center text-sm text-gray-400">Ничего не найдено</div>
-        </template>
-        <div class="max-h-64 overflow-y-auto divide-y divide-gray-50">
-          <template x-for="t in searchResults()" :key="t.id">
-            <div class="px-4 py-2.5 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
-                 @click="jumpToTask(t)">
-              <button class="flex-shrink-0 w-4 h-4 rounded border border-gray-400 bg-white flex items-center justify-center text-[11px] leading-none text-gray-700"
-                      @click.stop="toggleStatus(t)"
-                      x-text="t.status==='done' ? '✓' : ''"></button>
-              <div class="flex-1 min-w-0">
-                <div class="text-sm font-medium text-gray-900 truncate" :class="t.status==='done' ? 'line-through opacity-50' : ''" x-text="t.text"></div>
-                <div class="text-xs text-gray-400" x-text="formatTaskDate(t)"></div>
-                <template x-if="t.deadline">
-                  <span class="text-xs mt-0.5" :class="isOverdue(t) ? 'text-red-500 font-bold' : 'text-gray-400'" x-text="'до ' + fmtDeadline(t.deadline)"></span>
-                </template>
-              </div>
-              <template x-if="t.name">
-                <span class="text-xs text-gray-400 hidden sm:inline" x-text="t.name"></span>
-              </template>
-            </div>
-          </template>
+        <div v-if="carDictionary.length===0" class="px-1 py-2 text-xs text-gray-400">Пока пусто. Добавляйте сокращения чтобы они распознавались автоматически.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search results -->
+  <div v-if="searchQuery.trim()" class="max-w-6xl mx-auto px-4 mb-4">
+    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div class="px-4 py-2 bg-gray-50 border-b text-sm text-gray-500 flex items-center justify-between">
+        <span>Результаты поиска: <strong v-text="searchResults().length"></strong></span>
+        <button @click="searchQuery=''" class="text-gray-400 hover:text-gray-600">Очистить</button>
+      </div>
+      <div v-if="searchResults().length === 0" class="px-4 py-6 text-center text-sm text-gray-400">Ничего не найдено</div>
+      <div class="max-h-64 overflow-y-auto divide-y divide-gray-50">
+        <div v-for="t in searchResults()" :key="t.id" class="px-4 py-2.5 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors" @click="jumpToTask(t)">
+          <button class="flex-shrink-0 w-4 h-4 rounded border border-gray-400 bg-white flex items-center justify-center text-[11px] leading-none text-gray-700"
+                  @click.stop="toggleStatus(t)" v-text="t.status==='done' ? '✓' : ''"></button>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium text-gray-900 truncate" :class="t.status==='done' ? 'line-through opacity-50' : ''" v-text="t.text"></div>
+            <div class="text-xs text-gray-400" v-text="formatTaskDate(t)"></div>
+          </div>
+          <span v-if="t.name" class="text-xs text-gray-400 hidden sm:inline" v-text="t.name"></span>
         </div>
       </div>
     </div>
-  </template>
+  </div>
 
   <!-- Legend -->
   <div class="max-w-6xl mx-auto px-4 py-2 flex gap-4 text-xs text-gray-500">
@@ -351,1253 +309,574 @@
   </div>
 
   <!-- Modal -->
-  <div x-show="showModal" x-cloak
-       class="fixed inset-0 z-50 flex items-center justify-center p-4"
-       x-transition:enter="transition ease-out duration-200"
-       x-transition:enter-start="opacity-0"
-       x-transition:enter-end="opacity-100"
-       x-transition:leave="transition ease-in duration-150"
-       x-transition:leave-start="opacity-100"
-       x-transition:leave-end="opacity-0">
+  <div v-show="showModal" class="fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="closeModal()">
     <div class="absolute inset-0 bg-black/40" @click="closeModal()"></div>
-    <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 max-h-[90vh] overflow-y-auto"
-         x-transition:enter="transition ease-out duration-200"
-         x-transition:enter-start="opacity-0 scale-95"
-         x-transition:enter-end="opacity-100 scale-100">
+    <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-xs p-4 max-h-[85vh] overflow-y-auto">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="font-bold text-gray-900" x-text="editingTask ? 'Редактировать' : 'Новая задача'"></h2>
+        <h2 class="font-bold text-gray-900" v-text="editingTask ? 'Редактировать' : 'Новая задача'"></h2>
         <button @click="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
       </div>
-      <div class="text-xs text-gray-400 mb-3" x-text="modalDateLabel()"></div>
+      <div class="text-xs text-gray-400 mb-3" v-text="modalDateLabel()"></div>
       <form @submit.prevent="saveTask()">
-        <textarea x-model="formText" rows="2" required placeholder="Задача..."
-                  @input="autofillFromText()"
+        <textarea v-model="formText" rows="2" required placeholder="Задача..."
+                  @input="$nextTick(() => autofillFromText())" @keyup="$nextTick(() => autofillFromText())" @change="$nextTick(() => autofillFromText())"
                   class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:border-gray-400 mb-3"></textarea>
-        <div class="flex gap-2 mb-3">
-          <template x-for="c in colors" :key="c.id">
-            <button type="button" @click="formColor=c.id"
-                    class="w-7 h-7 rounded-full border-2 transition-all flex items-center justify-center"
-                    :class="formColor===c.id ? 'border-gray-900 scale-110' : 'border-transparent'"
-                    :style="'background:'+c.bg">
-              <span class="block w-3 h-3 rounded-full" :style="'background:'+c.dot"></span>
-            </button>
-          </template>
-        </div>
-        <div class="grid grid-cols-2 gap-2 mb-3">
-          <input type="text" x-model="formName" placeholder="Имя"
-                 class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400">
-          <input type="tel" x-model="formPhone" placeholder="Телефон"
-                 @input="onPhoneInput($event.target.value)"
-                 class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400">
-        </div>
-        <input type="text" x-model="formNote" placeholder="Со слов заказчика"
-               class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400 mb-3">
-        <!-- Car fields -->
-        <div class="mb-3 border border-gray-200 rounded-xl overflow-hidden">
-          <button type="button" @click="carExpanded = !carExpanded"
-                  class="w-full px-2.5 py-1.5 flex items-center justify-between text-[11px] font-medium text-gray-500 hover:bg-gray-50">
-            <span>Автомобиль</span>
-            <span x-text="carExpanded ? '▲' : '▼'" class="text-[10px]"></span>
+        <div class="flex gap-2 mb-3 justify-center">
+          <button v-for="c in colors" :key="c.id" type="button" @click="formColor=c.id"
+                  class="w-6 h-6 rounded-full border-2 transition-all flex items-center justify-center"
+                  :class="formColor===c.id ? 'border-gray-900 scale-110' : 'border-transparent'"
+                  :style="'background:'+c.bg">
+            <span class="block w-2.5 h-2.5 rounded-full" :style="'background:'+c.dot"></span>
           </button>
-          <div x-show="carExpanded" class="p-2.5 pt-0 bg-gray-50/50">
-          <div class="grid grid-cols-2 gap-2 mb-2">
-            <input type="text" x-model="formCarMake" placeholder="Марка (Toyota)"
-                   class="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-gray-400">
-            <input type="text" x-model="formCarModel" placeholder="Модель (Camry)"
-                   class="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-gray-400">
-          </div>
-          <div class="grid grid-cols-3 gap-2 mb-2">
-            <input type="text" x-model="formCarYear" placeholder="Год"
-                   class="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-gray-400">
-            <input type="text" x-model="formCarPlate" placeholder="Госномер"
-                   class="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-gray-400 uppercase">
-            <input type="text" x-model="formCarMileage" placeholder="Пробег км"
-                   class="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-gray-400">
-          </div>
-          <div class="relative">
-            <input type="text" x-model="formCarVin" placeholder="VIN (17 символов, без O)"
-                   maxlength="17"
-                   @input="validateVin()"
-                   class="w-full px-2.5 py-1.5 border rounded-lg text-xs focus:outline-none uppercase tracking-wider"
-                   :class="formCarVin && formCarVin.length > 0 && formCarVin.length !== 17 ? 'border-red-300 bg-red-50' : 'border-gray-200 focus:border-gray-400'">
-            <span x-show="formCarVin && formCarVin.length > 0 && formCarVin.length !== 17"
-                  class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-red-400"
-                  x-text="formCarVin.length + '/17'"></span>
-          </div>
-          <!-- Reminder -->
-          <div class="mt-2 pt-2 border-t border-gray-200">
-            <div class="text-[11px] font-medium text-gray-500 mb-2">Напоминание</div>
-            <input type="text" x-model="reminderTitle" placeholder="Текст напоминания"
-                   class="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-gray-400 mb-2">
-            <div class="grid grid-cols-2 gap-2 mb-2">
-              <input type="date" x-model="reminderDate"
-                     class="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-gray-400">
-              <select x-model="reminderTime"
-                      class="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-gray-400 bg-white">
-                <option value="">время</option>
-                <template x-for="t in deadlineTimes" :key="t">
-                  <option :value="t" x-text="t"></option>
-                </template>
-              </select>
-            </div>
-            <button type="button" @click="createReminder()"
-                    :disabled="!reminderTitle || !reminderDate"
-                    class="w-full px-3 py-1.5 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-              + Создать напоминание
-            </button>
-          </div>
-          </div>
         </div>
-        <template x-if="formHistory">
-          <div class="mb-3 border border-gray-200 rounded-xl overflow-hidden">
+        <!-- Quick fields: name, phone -->
+        <div class="grid grid-cols-2 gap-2 mb-2">
+          <input type="text" v-model="formName" placeholder="Имя" class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-400">
+          <input type="tel" v-model="formPhone" placeholder="Телефон"
+                 @blur="formatPhone()"
+                 @input="checkPhone($event.target.value)"
+                 class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-400">
+        </div>
+        <!-- Quick: car make + model -->
+        <div class="grid grid-cols-2 gap-2 mb-2">
+          <input type="text" v-model="formCarMake" placeholder="Марка" @blur="formCarMake = normalizeCarMake(formCarMake)"
+                 class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-400">
+          <input type="text" v-model="formCarModel" placeholder="Модель" @blur="formCarModel = normalizeCarModel(formCarModel, formCarMake)"
+                 class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-400">
+        </div>
+        <!-- Expand toggle -->
+        <button type="button" @click="expandedForm = !expandedForm"
+                class="w-full text-xs text-gray-400 hover:text-gray-600 py-1 mb-2 transition-colors">
+          <span v-text="expandedForm ? '▲ Свернуть' : '▼ Ещё поля'"></span>
+        </button>
+        <!-- Expanded fields -->
+        <template v-if="expandedForm">
+          <input type="text" v-model="formNote" placeholder="Со слов заказчика"
+                 class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-400 mb-2">
+          <input type="text" v-model="formExtra" placeholder="Рекомендация"
+                 class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-400 mb-2">
+          <!-- History -->
+          <div v-if="formHistory" class="mb-2 border border-gray-200 rounded-lg overflow-hidden">
             <button type="button" @click="historyExpanded = !historyExpanded"
-                    class="w-full px-2.5 py-1.5 flex items-center justify-between text-[11px] font-medium text-gray-500 hover:bg-gray-50">
-              <span>Предыдущие записи (<span x-text="historyRecords.length"></span>)</span>
-              <span x-text="historyExpanded ? '▲' : '▼'" class="text-[10px]"></span>
+                    class="w-full px-2 py-1 flex items-center justify-between text-[11px] font-medium text-gray-500 hover:bg-gray-50">
+              <span>История (<span v-text="historyRecords.length"></span>)</span>
+              <span v-text="historyExpanded ? '▲' : '▼'" class="text-[10px]"></span>
             </button>
-            <div x-show="historyExpanded" class="max-h-48 overflow-y-auto bg-gray-50/50">
-              <template x-for="(rec, ri) in historyRecords" :key="ri">
-                <button type="button" @click="historyDetailIndex = ri; historyDetailTask = rec; showHistoryDetail = true"
-                        class="w-full px-2.5 py-1.5 text-left text-xs text-gray-600 hover:bg-gray-100 border-b border-gray-100 last:border-b-0 flex items-center justify-between group">
-                  <span class="truncate" x-text="rec.dateLabel + ' — ' + rec.text"></span>
-                  <span class="text-gray-300 group-hover:text-gray-500 text-[10px] ml-1 shrink-0">→</span>
-                </button>
-              </template>
+            <div v-show="historyExpanded" class="max-h-32 overflow-y-auto bg-gray-50/50">
+              <button v-for="(rec, ri) in historyRecords" :key="ri" type="button"
+                      @click="historyDetailIndex = ri; historyDetailTask = rec; showHistoryDetail = true"
+                      class="w-full px-2 py-1 text-left text-[11px] text-gray-600 hover:bg-gray-100 border-b border-gray-100 last:border-b-0">
+                <span v-text="rec.dateLabel + ' — ' + rec.text"></span>
+              </button>
             </div>
           </div>
-        </template>
-        <input type="text" x-model="formExtra" placeholder="Рекомендация"
-               class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400 mb-3">
-        <div class="grid grid-cols-2 gap-2 mb-3">
-          <div class="date-picker-wrap">
-            <input type="date" x-model="formDeadlineDate"
-                   class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400">
-            <span class="date-label" x-show="!formDeadlineDate">Дедлайн</span>
+          <!-- Car extra fields -->
+          <div class="grid grid-cols-3 gap-2 mb-2">
+            <input type="text" v-model="formCarYear" placeholder="Год" class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-gray-400">
+            <input type="text" v-model="formCarPlate" placeholder="Госномер" class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-gray-400 uppercase">
+            <input type="text" v-model="formCarMileage" placeholder="Пробег" class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-gray-400">
           </div>
-          <select x-model="formDeadlineTime"
-                  class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400 bg-white">
-            <option value="">без времени</option>
-            <template x-for="t in deadlineTimes" :key="t">
-              <option :value="t" x-text="t"></option>
-            </template>
-          </select>
-        </div>
-        <!-- Consent & messengers -->
-        <div class="mb-3 p-2.5 border border-gray-200 rounded-xl bg-gray-50/50">
-          <div class="flex items-center justify-between mb-2">
+          <div class="relative mb-2">
+            <input type="text" v-model="formCarVin" placeholder="VIN (17 символов)" maxlength="17"
+                   @input="validateVin()"
+                   class="w-full px-2 py-1.5 border rounded-lg text-xs focus:outline-none uppercase"
+                   :class="formCarVin && formCarVin.length > 0 && formCarVin.length !== 17 ? 'border-red-300 bg-red-50' : 'border-gray-200 focus:border-gray-400'">
+          </div>
+          <!-- Deadline -->
+          <div class="grid grid-cols-2 gap-2 mb-2">
+            <div class="date-picker-wrap">
+              <input type="date" v-model="formDeadlineDate" class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-gray-400">
+              <span class="date-label" style="font-size:11px" v-show="!formDeadlineDate">Дедлайн</span>
+            </div>
+            <select v-model="formDeadlineTime" class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-gray-400 bg-white">
+              <option value="">без времени</option>
+              <option v-for="t in deadlineTimes" :key="t" :value="t" v-text="t"></option>
+            </select>
+          </div>
+          <!-- Consent -->
+          <div class="mb-2 p-2 border border-gray-200 rounded-lg bg-gray-50/50">
             <button type="button" @click="formConsent = !formConsent"
-                    class="flex items-center gap-2 text-xs"
+                    class="flex items-center gap-2 text-xs w-full text-left"
                     :class="formConsent ? 'text-green-700' : 'text-gray-500'">
               <span class="w-4 h-4 rounded border flex items-center justify-center text-[10px]"
                     :class="formConsent ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300'"
-                    x-text="formConsent ? '✓' : ''"></span>
-              Согласие 152-ФЗ получено
+                    v-text="formConsent ? '✓' : ''"></span>
+              Согласие 152-ФЗ
             </button>
-          </div>
-          <template x-if="formPhone">
-            <div class="flex gap-1.5 flex-wrap">
-              <button type="button" @click="sendConsent('whatsapp')" title="WhatsApp"
-                      class="px-2.5 py-1 rounded-lg text-[10px] font-medium bg-green-100 text-green-700 hover:bg-green-200 transition-colors">
-                WA
-              </button>
-              <button type="button" @click="sendConsent('telegram')" title="Telegram"
-                      class="px-2.5 py-1 rounded-lg text-[10px] font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors">
-                TG
-              </button>
-              <button type="button" @click="sendConsent('max')" title="MAX"
-                      class="px-2.5 py-1 rounded-lg text-[10px] font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors">
-                MAX
-              </button>
-              <button type="button" @click="sendConsent('sms')" title="SMS"
-                      class="px-2.5 py-1 rounded-lg text-[10px] font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">
-                SMS
-              </button>
+            <div v-if="formPhone" class="flex gap-1.5 mt-1.5">
+              <button type="button" @click="sendConsent('whatsapp')" class="px-2 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700 hover:bg-green-200">WA</button>
+              <button type="button" @click="sendConsent('telegram')" class="px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700 hover:bg-blue-200">TG</button>
+              <button type="button" @click="sendConsent('sms')" class="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">SMS</button>
             </div>
-          </template>
-          <template x-if="!formPhone">
-            <span class="text-[10px] text-gray-400">Введите телефон для отправки</span>
-          </template>
-        </div>
-        <div class="flex gap-2 mb-4">
-          <button type="button" @click="formStatus='todo'"
-                  class="flex-1 py-2 rounded-xl text-sm font-medium border transition-colors"
-                  :class="formStatus==='todo' ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'">
-            В работе
-          </button>
-          <button type="button" @click="formStatus='done'"
-                  class="flex-1 py-2 rounded-xl text-sm font-medium border transition-colors"
-                  :class="formStatus==='done' ? 'bg-green-100 text-green-800 border-green-300' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'">
-            Готово
-          </button>
-        </div>
+          </div>
+        </template>
         <div class="flex gap-2">
-          <template x-if="editingTask">
-            <button type="button" @click="deleteTask()"
-                    class="px-4 py-2 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 border border-red-200">
-              Удалить
-            </button>
-          </template>
+          <button v-if="editingTask" type="button" @click="deleteTask()" class="px-4 py-2 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 border border-red-200">Удалить</button>
           <div class="flex-1"></div>
-          <button type="button" @click="closeModal()"
-                  class="px-4 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100">
-            Отмена
-          </button>
-          <button type="submit"
-                  class="px-6 py-2 rounded-xl text-sm font-medium bg-gray-900 text-white hover:bg-gray-800">
-            Сохранить
-          </button>
+          <button type="button" @click="closeModal()" class="px-4 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100">Отмена</button>
+          <button type="submit" class="px-6 py-2 rounded-xl text-sm font-medium bg-gray-900 text-white hover:bg-gray-800">Сохранить</button>
         </div>
       </form>
     </div>
   </div>
 
-  <script>
-    function planner() {
-      return {
-        tasks: [],
-        tabs: [],
-        activeTab: '',
-        showModal: false,
-        editingTask: null,
-        formText: '',
-        formStatus: 'todo',
-        formColor: 'amber',
-        formName: '',
-        formPhone: '',
-        formNote: '',
-        formExtra: '',
-        formDeadline: '',
-        formDeadlineDate: '',
-        formDeadlineTime: '',
-        deadlineTimes: [],
-        formConsent: false,
-        tooltipTask: null,
-        tooltipX: 0,
-        tooltipY: 0,
-        formHistory: '',
-        historyRecords: [],
-        showHistoryDetail: false,
-        historyDetailTask: null,
-        historyDetailIndex: 0,
-        formCarMake: '',
-        formCarModel: '',
-        formCarYear: '',
-        formCarPlate: '',
-        formCarMileage: '',
-        formCarVin: '',
-        reminderTitle: '',
-        reminderDate: '',
-        reminderTime: '',
-        formDay: '',
-        formHour: 10,
-        weekOffset: 0,
-        searchQuery: '',
-
-        colors: [
-          { id: 'amber',  bg: '#fef3c7', dot: '#f59e0b', text: 'text-amber-800',  border: 'border-amber-200',  bgDark: '#422006', textDark: '#fcd34d' },
-          { id: 'green',  bg: '#dcfce7', dot: '#22c55e', text: 'text-green-800',  border: 'border-green-200',  bgDark: '#052e16', textDark: '#86efac' },
-          { id: 'blue',   bg: '#dbeafe', dot: '#3b82f6', text: 'text-blue-800',   border: 'border-blue-200',   bgDark: '#1e3a5f', textDark: '#93c5fd' },
-          { id: 'purple', bg: '#f3e8ff', dot: '#a855f7', text: 'text-purple-800', border: 'border-purple-200', bgDark: '#3b0764', textDark: '#d8b4fe' },
-          { id: 'red',    bg: '#fee2e2', dot: '#ef4444', text: 'text-red-800',    border: 'border-red-200',    bgDark: '#450a0a', textDark: '#fca5a5' },
-        ],
-
-        hours: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
-        days: [],
-        showSunday: false,
-        hourStart: 10,
-        hourEnd: 19,
-        timeLine: { visible: false, top: 0 },
-        timeInterval: null,
-
-        init() {
-          this.loadTabs();
-          this.loadNames();
-          this.loadClients();
-          this.darkMode = localStorage.getItem('planner_dark') === 'true';
-          this.applyDark();
-          this.calcWeek();
-          setTimeout(() => this.updateTimeLine(), 100);
-          this.timeInterval = setInterval(() => this.updateTimeLine(), 60000);
-        },
-
-        toggleDark() {
-          this.darkMode = !this.darkMode;
-          localStorage.setItem('planner_dark', this.darkMode);
-          this.applyDark();
-        },
-
-        applyDark() {
-          document.documentElement.classList.toggle('dark', this.darkMode);
-        },
-
-        calcWeek() {
-          const now = new Date();
-          const monday = new Date(now);
-          monday.setDate(now.getDate() - ((now.getDay() + 6) % 7) + this.weekOffset * 7);
-
-          const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-          const dayCount = this.showSunday ? 7 : 6;
-          this.days = [];
-          for (let i = 0; i < dayCount; i++) {
-            const d = new Date(monday);
-            d.setDate(monday.getDate() + i);
-            this.days.push({
-              short: dayNames[i] || 'Вс',
-              num: d.getDate(),
-              date: d,
-              dateStr: this.dateStr(d),
-            });
-          }
-          this.recalcHours();
-        },
-
-        recalcHours() {
-          const arr = [];
-          for (let h = this.hourStart; h <= this.hourEnd; h++) arr.push(h);
-          this.hours = arr;
-          // Build deadline time options
-          const times = [];
-          for (let h = this.hourStart; h <= this.hourEnd; h++) {
-            times.push(`${String(h).padStart(2,'0')}:00`);
-            times.push(`${String(h).padStart(2,'0')}:30`);
-          }
-          this.deadlineTimes = times;
-        },
-
-        toggleSunday() {
-          this.showSunday = !this.showSunday;
-          this.calcWeek();
-        },
-
-        addHourEnd() {
-          if (this.hourEnd < 23) { this.hourEnd++; this.recalcHours(); }
-        },
-
-        removeHourEnd() {
-          if (this.hourEnd > this.hourStart) { this.hourEnd--; this.recalcHours(); }
-        },
-
-        addHourStart() {
-          if (this.hourStart > 0) { this.hourStart--; this.recalcHours(); }
-        },
-
-        removeHourStart() {
-          if (this.hourStart < this.hourEnd) { this.hourStart++; this.recalcHours(); }
-        },
-
-        dateStr(d) {
-          return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        },
-
-        isToday(d) {
-          const now = new Date();
-          return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
-        },
-
-        weekLabel() {
-          if (!this.days.length) return '';
-          const from = this.days[0].date;
-          const to = this.days[this.days.length - 1].date;
-          const fmt = (d) => `${d.getDate()} ${['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'][d.getMonth()]}`;
-          return `${fmt(from)} — ${fmt(to)}`;
-        },
-
-        prevWeek() { this.weekOffset--; this.calcWeek(); setTimeout(() => this.updateTimeLine(), 100); },
-        nextWeek() { this.weekOffset++; this.calcWeek(); setTimeout(() => this.updateTimeLine(), 100); },
-        goToday() { this.weekOffset = 0; this.calcWeek(); setTimeout(() => this.updateTimeLine(), 100); },
-
-        getTasks(day, hour) {
-          let list = this.tasks.filter(t => t.day === day && t.hour === hour);
-          if (this.searchQuery.trim()) {
-            const q = this.searchQuery.toLowerCase();
-            list = list.filter(t =>
-              (t.text || '').toLowerCase().includes(q) ||
-              (t.name || '').toLowerCase().includes(q) ||
-              (t.phone || '').toLowerCase().includes(q) ||
-              (t.note || '').toLowerCase().includes(q) ||
-              (t.extra || '').toLowerCase().includes(q)
-            );
-          }
-          return list;
-        },
-
-        openModal(day, hour, task = null) {
-          this.formDay = day;
-          this.formHour = hour;
-          this.editingTask = task;
-          this.formText = task ? task.text : '';
-          this.formStatus = task ? task.status : 'todo';
-          this.formColor = task ? (task.color || 'amber') : 'amber';
-          this.formName = task ? (task.name || '') : '';
-          this.formPhone = task ? (task.phone || '') : '';
-          this.formNote = task ? (task.note || '') : '';
-          this.formExtra = task ? (task.extra || '') : '';
-          this.formDeadline = task ? (task.deadline || '') : '';
-          if (this.formDeadline) {
-            const parts = this.formDeadline.split('T');
-            this.formDeadlineDate = parts[0] || '';
-            this.formDeadlineTime = parts[1] ? parts[1].slice(0,5) : '';
-          } else {
-            this.formDeadlineDate = '';
-            this.formDeadlineTime = '';
-          }
-          this.formHistory = '';
-          this.formCarMake = task ? (task.carMake || '') : '';
-          this.formCarModel = task ? (task.carModel || '') : '';
-          this.formCarYear = task ? (task.carYear || '') : '';
-          this.formCarPlate = task ? (task.carPlate || '') : '';
-          this.formCarMileage = task ? (task.carMileage || '') : '';
-          this.formCarVin = task ? (task.carVin || '') : '';
-          this.carExpanded = false;
-          if (task && task.phone) {
-            this.$nextTick(() => this.findPreviousByPhone(task.phone));
-          }
-          this.showModal = true;
-          this.$nextTick(() => {
-            const el = document.querySelector('textarea');
-            if (el) el.focus();
-          });
-        },
-
-        closeModal() {
-          this.showModal = false;
-          this.editingTask = null;
-          this.formText = '';
-          this.formStatus = 'todo';
-          this.formColor = 'amber';
-          this.formName = '';
-          this.formPhone = '';
-          this.formNote = '';
-          this.formExtra = '';
-          this.formDeadline = '';
-          this.formDeadlineDate = '';
-          this.formDeadlineTime = '';
-          this.formConsent = false;
-          this.formHistory = '';
-          this.historyRecords = [];
-          this.historyExpanded = false;
-          this.showHistoryDetail = false;
-          this.historyDetailTask = null;
-          this.carExpanded = false;
-          this.formCarMake = '';
-          this.formCarModel = '';
-          this.formCarYear = '';
-          this.formCarPlate = '';
-          this.formCarMileage = '';
-          this.formCarVin = '';
-          this.reminderTitle = '';
-          this.reminderDate = '';
-          this.reminderTime = '';
-        },
-
-        saveTask() {
-          if (!this.formText.trim()) return;
-          const data = {
-            text: this.formText.trim(),
-            status: this.formStatus,
-            color: this.formColor,
-            name: this.formName.trim(),
-            phone: this.formPhone.trim(),
-            note: this.formNote.trim(),
-            extra: this.formExtra.trim(),
-            deadline: this.formDeadlineDate + (this.formDeadlineTime ? 'T' + this.formDeadlineTime : ''),
-            consent: this.formConsent,
-            carMake: this.formCarMake.trim(),
-            carModel: this.formCarModel.trim(),
-            carYear: this.formCarYear.trim(),
-            carPlate: this.formCarPlate.trim().toUpperCase(),
-            carMileage: this.formCarMileage.trim(),
-            carVin: this.formCarVin.trim().toUpperCase(),
-          };
-          if (this.editingTask) {
-            Object.assign(this.editingTask, data);
-          } else {
-            this.tasks.push({
-              id: Date.now(),
-              day: this.formDay,
-              hour: this.formHour,
-              createdAt: new Date().toISOString(),
-              ...data,
-            });
-          }
-          this.persist();
-          if (data.name) this.saveName(data.name);
-          if (data.phone && data.name) this.savePhoneName(data.phone, data.name);
-          if (data.phone) this.saveClient(data);
-          this.closeModal();
-        },
-
-        deleteTask() {
-          if (!this.editingTask) return;
-          this.tasks = this.tasks.filter(t => t.id !== this.editingTask.id);
-          this.persist();
-          this.closeModal();
-        },
-
-        toggleStatus(task) {
-          task.status = task.status === 'done' ? 'todo' : 'done';
-          this.persist();
-        },
-
-        _dragTask: null,
-        expandedCells: {},
-        knownNames: [],
-        showNamesList: false,
-        darkMode: false,
-        historyExpanded: false,
-        carExpanded: false,
-        clients: [],
-        showClientsList: false,
-
-        dragStart(e, task) {
-          this._dragTask = task;
-          e.dataTransfer.effectAllowed = 'move';
-          e.dataTransfer.setData('text/plain', task.id);
-          e.target.style.opacity = '0.4';
-          setTimeout(() => { if (e.target) e.target.style.opacity = ''; }, 0);
-        },
-
-        dropTask(day, hour) {
-          if (!this._dragTask) return;
-          this._dragTask.day = day;
-          this._dragTask.hour = hour;
-          this._dragTask = null;
-          this.persist();
-        },
-
-        toggleExpand(key) {
-          this.expandedCells[key] = !this.expandedCells[key];
-        },
-
-        historyNav(dir) {
-          const newIdx = this.historyDetailIndex + dir;
-          if (newIdx < 0 || newIdx >= this.historyRecords.length) return;
-          this.historyDetailIndex = newIdx;
-          this.historyDetailTask = this.historyRecords[newIdx];
-        },
-
-        positionTooltip(e, show) {
-          if (show) {
-            const chip = e.currentTarget;
-            const taskText = chip.querySelector('span[x-text]');
-            const taskId = parseInt(chip.getAttribute('data-task-id'));
-            const rect = chip.getBoundingClientRect();
-            let left = rect.right + 6;
-            let top = rect.top;
-            if (left + 220 > window.innerWidth) left = rect.left - 226;
-            if (top + 150 > window.innerHeight) top = window.innerHeight - 160;
-            this.tooltipX = left;
-            this.tooltipY = top;
-            // Find task from the cell's data
-            const day = chip.closest('td')?.dataset.day;
-            const hour = parseInt(chip.closest('td')?.dataset.hour);
-            if (day && hour) {
-              const tasks = this.getTasks(day, hour);
-              const task = tasks.find(t => t.id === taskId);
-              if (task) this.tooltipTask = task;
-            }
-          } else {
-            this.tooltipTask = null;
-          }
-        },
-
-        jumpToHistory(task) {
-          if (!task || !task.day) return;
-          const d = new Date(task.day + 'T00:00:00');
-          const now = new Date();
-          const monday = new Date(now);
-          monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-          const diffDays = Math.round((d - monday) / 86400000);
-          this.weekOffset = Math.floor(diffDays / 7);
-          this.calcWeek();
-          this.showHistoryDetail = false;
-          this.showModal = false;
-          setTimeout(() => {
-            this.updateTimeLine();
-            const cell = document.querySelector(`td[data-day="${task.day}"][data-hour="${task.hour}"]`);
-            if (cell) {
-              cell.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              cell.classList.remove('blink-cell');
-              void cell.offsetWidth;
-              cell.classList.add('blink-cell');
-            }
-          }, 200);
-        },
-
-        validateVin() {
-          // Strip non-Latin characters and O (confused with 0)
-          this.formCarVin = this.formCarVin
-            .replace(/[^A-HJ-NPR-Z0-9]/gi, '')
-            .replace(/O/gi, '0')
-            .toUpperCase()
-            .slice(0, 17);
-        },
-
-        createReminder() {
-          if (!this.reminderTitle || !this.reminderDate) return;
-          const reminder = {
-            id: Date.now(),
-            day: this.reminderDate,
-            hour: this.reminderTime ? parseInt(this.reminderTime.split(':')[0]) : 10,
-            text: this.reminderTitle.trim(),
-            status: 'todo',
-            color: 'blue',
-            name: this.formName || '',
-            phone: this.formPhone || '',
-            note: 'Напоминание',
-            extra: '',
-            deadline: '',
-            carMake: this.formCarMake || '',
-            carModel: this.formCarModel || '',
-            carYear: this.formCarYear || '',
-            carPlate: this.formCarPlate || '',
-            carMileage: this.formCarMileage || '',
-            carVin: this.formCarVin || '',
-          };
-          this.tasks.push(reminder);
-          this.persist();
-          this.reminderTitle = '';
-          this.reminderDate = '';
-          this.reminderTime = '';
-        },
-
-        autofillFromText() {
-          const t = this.formText;
-          // Extract phone: 8XXXXXXXXXX or 7XXXXXXXXXX or +7XXXXXXXXXX
-          const phoneMatch = t.match(/(?:\+?7|8)(\d{10})\b/);
-          if (phoneMatch && !this.formPhone) {
-            this.formPhone = this.formatPhoneRaw(phoneMatch[0]);
-            this.onPhoneInput(this.formPhone);
-          }
-          // Extract name ONLY if phone lookup hasn't set it yet
-          if (!this.formName) {
-            const namePatterns = [
-              /(?:для|клиент|заказчик|имя|зовут|позвонить)\s+([А-ЯЁ][а-яё]{1,20})\b/i,
-              /\b([А-ЯЁ][а-яё]{2,20})\s+(?:позвонит|приедет|ждет|ждёт|записан|хочет|хочёт|нужен|нужна|будет)\b/i,
-              /\b([А-ЯЁ][а-яё]{2,20})\s+(?:tel|телефон|номер|тел)\b/i,
-            ];
-            for (const pat of namePatterns) {
-              const m = t.match(pat);
-              if (m) { this.formName = m[1]; break; }
-            }
-          }
-          // Check known names database
-          if (!this.formName) {
-            const lower = t.toLowerCase();
-            for (const n of this.knownNames) {
-              if (lower.includes(n.toLowerCase())) {
-                this.formName = n;
-                break;
-              }
-            }
-          }
-          // Last resort: standalone capitalized word
-          if (!this.formName) {
-            const ignore = /^(Замена|Проверка|Установка|Ремонт|Диагностика|Чистка|Заправка|Покупка|Продажа|Звонок|Встреча|Оплата|Доставка|Возврат|Сдача|Прием|Приём|Выдача|Осмотр|Обслуживание|ТО|ПТС|СТС|ДСА|ДТП)$/i;
-            const simpleMatch = t.match(/(?:^|[.,;!?\s])([А-ЯЁ][а-яё]{2,15})(?:[.,;!?\s]|$)/);
-            if (simpleMatch && !ignore.test(simpleMatch[1])) {
-              this.formName = simpleMatch[1];
-            }
-          }
-        },
-
-        onPhoneInput(val) {
-          const raw = val.replace(/\D/g, '');
-          this.formPhone = this.formatPhoneRaw(raw);
-          if (raw.length >= 10) {
-            this.findPreviousByPhone(raw);
-          }
-        },
-
-        formatPhone() {
-          const raw = this.formPhone.replace(/\D/g, '');
-          this.formPhone = this.formatPhoneRaw(raw);
-          if (raw.length >= 10) {
-            this.findPreviousByPhone(raw);
-          }
-        },
-
-        formatPhoneRaw(raw) {
-          const digits = raw.replace(/\D/g, '');
-          if (digits.length < 10) return raw;
-          const d = digits.slice(-10);
-          const full = digits.length >= 11 ? digits.slice(-11) : '7' + d;
-          return `+7 (${full.slice(1,4)}) ${full.slice(4,7)}-${full.slice(7,9)}-${full.slice(9,11)}`;
-        },
-
-        findPreviousByPhone(rawDigits) {
-          const digits = rawDigits.replace(/\D/g, '');
-          if (digits.length < 10) return;
-          // Quick lookup from phone_names database
-          // Quick lookup from phone_names database — only if name empty
-          if (!this.formName) {
-            try {
-              const map = JSON.parse(localStorage.getItem('planner_phone_names') || '{}');
-              const d10 = digits.slice(-10);
-              if (map[d10]) {
-                const names = Array.isArray(map[d10]) ? map[d10] : [map[d10]];
-                this.formName = names[names.length - 1];
-              }
-            } catch {}
-          }
-          // Auto-fill car info from clients database
-          if (!this.formCarMake && !this.formCarModel) {
-            const client = this.clients.find(c => {
-              const cDigits = (c.phone || '').replace(/\D/g, '').slice(-10);
-              return cDigits === digits.slice(-10);
-            });
-            if (client && client.cars.length > 0) {
-              const car = client.cars[client.cars.length - 1];
-              this.formCarMake = car.make || '';
-              this.formCarModel = car.model || '';
-              this.formCarYear = car.year || '';
-              this.formCarPlate = car.plate || '';
-              this.formCarVin = car.vin || '';
-              this.formCarMileage = car.mileage || '';
-            }
-          }
-          // Search all tasks (all tabs) for this phone
-          let allTasks = [...this.tasks];
-          try {
-            const allData = JSON.parse(localStorage.getItem('planner_all_tasks') || '{}');
-            for (const [tabId, tabTasks] of Object.entries(allData)) {
-              if (tabId !== this.activeTab) allTasks = allTasks.concat(tabTasks);
-            }
-          } catch {}
-          const matches = allTasks.filter(t => {
-            if (!t.phone) return false;
-            const tDigits = t.phone.replace(/\D/g, '');
-            const t10 = tDigits.slice(-10);
-            const d10 = digits.slice(-10);
-            return t10 === d10;
-          });
-          if (matches.length === 0) { this.formHistory = ''; this.historyRecords = []; return; }
-          // Phone sets name only if field is empty — don't override manual input
-          if (!this.formName) {
-            const sorted = matches.sort((a, b) => b.day.localeCompare(a.day));
-            const named = sorted.find(t => t.name);
-            if (named) this.formName = named.name;
-          }
-          const months = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
-          const sorted = matches.sort((a, b) => b.day.localeCompare(a.day));
-          this.historyRecords = sorted.map(t => {
-            const d = new Date(t.day + 'T00:00:00');
-            return {
-              ...t,
-              dateLabel: `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}, ${t.hour}:00`,
-            };
-          });
-          this.formHistory = sorted.map(t => {
-            const d = new Date(t.day + 'T00:00:00');
-            return `${d.getDate()} ${months[d.getMonth()]} — ${t.text}`;
-          }).join('\n');
-        },
-
-        getColor(colorId, prop) {
-          const c = this.colors.find(x => x.id === colorId) || this.colors[0];
-          return c[prop];
-        },
-
-        taskStyle(task) {
-          const c = task.status === 'done'
-            ? this.colors.find(x => x.id === 'green')
-            : this.colors.find(x => x.id === (task.color || 'amber')) || this.colors[0];
-          if (this.darkMode) {
-            return `background:${c.bgDark};border-color:${c.dot};color:${c.textDark}`;
-          }
-          return `background:${c.bg};border-color:${c.dot};color:${c.text}`;
-        },
-
-        searchResults() {
-          const q = this.searchQuery.toLowerCase().trim();
-          if (!q) return [];
-          const months = {
-            'янв': 0, 'январь': 0, 'января': 0,
-            'фев': 1, 'февраль': 1, 'февраля': 1,
-            'мар': 2, 'март': 2, 'марта': 2,
-            'апр': 3, 'апрель': 3, 'апреля': 3,
-            'май': 4, 'мая': 4, 'май': 4,
-            'июн': 5, 'июнь': 5, 'июня': 5,
-            'июл': 6, 'июль': 6, 'июля': 6,
-            'авг': 7, 'август': 7, 'августа': 7,
-            'сен': 8, 'сентябрь': 8, 'сентября': 8,
-            'окт': 9, 'октябрь': 9, 'октября': 9,
-            'ноя': 10, 'ноябрь': 10, 'ноября': 10,
-            'дек': 11, 'декабрь': 11, 'декабря': 11,
-          };
-          // Try to parse date from query
-          let dateMatch = null;
-          // Pattern: "18.06" or "18.06.2026"
-          const dotMatch = q.match(/(\d{1,2})\.(\d{1,2})(?:\.(\d{2,4}))?/);
-          if (dotMatch) {
-            const day = parseInt(dotMatch[1]);
-            const month = parseInt(dotMatch[2]) - 1;
-            const year = dotMatch[3] ? parseInt(dotMatch[3]) : null;
-            if (day >= 1 && day <= 31 && month >= 0 && month <= 11) {
-              dateMatch = { day, month, year };
-            }
-          }
-          // Pattern: "18 май" or "май 18" or "мая 18"
-          if (!dateMatch) {
-            const words = q.split(/\s+/);
-            for (const w of words) {
-              if (months[w] !== undefined) {
-                const numWord = words.find(x => /^\d{1,2}$/.test(x));
-                if (numWord) {
-                  dateMatch = { day: parseInt(numWord), month: months[w], year: null };
-                  break;
-                }
-              }
-            }
-          }
-          // Pattern: just month name
-          let monthOnly = null;
-          if (!dateMatch) {
-            for (const [w, m] of Object.entries(months)) {
-              if (q === w || q === w + 'ь' || q === w + 'я') {
-                monthOnly = m;
-                break;
-              }
-            }
-          }
-          return this.tasks.filter(t => {
-            // Text match
-            const textMatch = (t.text || '').toLowerCase().includes(q) ||
-              (t.name || '').toLowerCase().includes(q) ||
-              (t.phone || '').toLowerCase().includes(q) ||
-              (t.note || '').toLowerCase().includes(q) ||
-              (t.extra || '').toLowerCase().includes(q) ||
-              (t.carMake || '').toLowerCase().includes(q) ||
-              (t.carModel || '').toLowerCase().includes(q);
-            // Date match
-            if (dateMatch) {
-              const td = new Date(t.day + 'T00:00:00');
-              if (td.getDate() !== dateMatch.day) return false;
-              if (td.getMonth() !== dateMatch.month) return false;
-              if (dateMatch.year && td.getFullYear() !== dateMatch.year) return false;
-              return true;
-            }
-            if (monthOnly !== null) {
-              const td = new Date(t.day + 'T00:00:00');
-              return td.getMonth() === monthOnly;
-            }
-            return textMatch;
-          }).sort((a, b) => a.day.localeCompare(b.day) || a.hour - b.hour);
-        },
-
-        jumpToTask(task) {
-          const d = new Date(task.day + 'T00:00:00');
-          const now = new Date();
-          const monday = new Date(now);
-          monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-          const diffDays = Math.round((d - monday) / 86400000);
-          this.weekOffset = Math.floor(diffDays / 7);
-          this.calcWeek();
-          this.$nextTick(() => {
-            const taskDateStr = task.day;
-            const matchDay = this.days.find(dy => dy.dateStr === taskDateStr);
-            if (matchDay) {
-              const cell = document.querySelector(`td[data-day="${taskDateStr}"][data-hour="${task.hour}"]`);
-              if (cell) cell.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-          });
-        },
-
-        formatTaskDate(task) {
-          const d = new Date(task.day + 'T00:00:00');
-          const dayNames = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
-          const months = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
-          return `${dayNames[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}, ${task.hour}:00`;
-        },
-
-        fmtDeadline(val) {
-          if (!val) return '';
-          const d = new Date(val);
-          const months = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
-          const hh = String(d.getHours()).padStart(2,'0');
-          const mm = String(d.getMinutes()).padStart(2,'0');
-          return `${d.getDate()} ${months[d.getMonth()]} ${hh}:${mm}`;
-        },
-
-        fmtCreatedAt(val) {
-          if (!val) return '';
-          const d = new Date(val);
-          const months = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
-          const hh = String(d.getHours()).padStart(2,'0');
-          const mm = String(d.getMinutes()).padStart(2,'0');
-          return `${d.getDate()} ${months[d.getMonth()]} ${hh}:${mm}`;
-        },
-
-        isOverdue(task) {
-          if (!task.deadline || task.status === 'done') return false;
-          const now = new Date();
-          const dl = new Date(task.deadline);
-          return now > dl;
-        },
-
-        updateTimeLine() {
-          const now = new Date();
-          const h = now.getHours();
-          const m = now.getMinutes();
-          if (h < this.hourStart || h > this.hourEnd) {
-            this.timeLine.visible = false;
-            return;
-          }
-          const ROW_H = 52;
-          const thead = document.querySelector('thead');
-          const theadH = thead ? thead.offsetHeight : 0;
-          const hourIndex = h - this.hourStart;
-          const offset = theadH + hourIndex * ROW_H + (m / 60) * ROW_H;
-          this.timeLine.visible = true;
-          this.timeLine.top = offset;
-        },
-
-        modalDateLabel() {
-          if (!this.formDay) return '';
-          const d = new Date(this.formDay + 'T00:00:00');
-          const dayNames = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
-          return `${dayNames[d.getDay()]}, ${this.formHour}:00`;
-        },
-
-        persist() {
-          const allTasks = JSON.parse(localStorage.getItem('planner_all_tasks') || '{}');
-          allTasks[this.activeTab] = this.tasks;
-          localStorage.setItem('planner_all_tasks', JSON.stringify(allTasks));
-        },
-
-        loadTasks() {
-          try {
-            const allTasks = JSON.parse(localStorage.getItem('planner_all_tasks') || '{}');
-            this.tasks = allTasks[this.activeTab] || [];
-          } catch {
-            this.tasks = [];
-          }
-        },
-
-        // Tab management
-        loadTabs() {
-          try {
-            this.tabs = JSON.parse(localStorage.getItem('planner_tabs') || '[]');
-          } catch {
-            this.tabs = [];
-          }
-          if (this.tabs.length === 0) {
-            this.tabs = [{ id: 'tab_1', name: 'Основное' }];
-            this.activeTab = 'tab_1';
-            // Migrate old single-storage tasks
-            const oldTasks = JSON.parse(localStorage.getItem('planner_tasks') || '[]');
-            if (oldTasks.length > 0) {
-              const allTasks = {};
-              allTasks['tab_1'] = oldTasks;
-              localStorage.setItem('planner_all_tasks', JSON.stringify(allTasks));
-              localStorage.removeItem('planner_tasks');
-            }
-            this.saveTabs();
-          } else {
-            this.activeTab = this.tabs[0].id;
-          }
-          this.loadTasks();
-        },
-
-        saveTabs() {
-          localStorage.setItem('planner_tabs', JSON.stringify(this.tabs));
-        },
-
-        loadNames() {
-          try {
-            this.knownNames = JSON.parse(localStorage.getItem('planner_names') || '[]');
-          } catch { this.knownNames = []; }
-        },
-
-        saveName(name) {
-          if (!name || this.knownNames.includes(name)) return;
-          this.knownNames.push(name);
-          this.knownNames.sort();
-          localStorage.setItem('planner_names', JSON.stringify(this.knownNames));
-        },
-
-        savePhoneName(phone, name) {
-          if (!phone || !name) return;
-          try {
-            const map = JSON.parse(localStorage.getItem('planner_phone_names') || '{}');
-            const digits = phone.replace(/\D/g, '').slice(-10);
-            const existing = map[digits] || [];
-            if (!existing.includes(name)) {
-              existing.push(name);
-            }
-            map[digits] = existing;
-            localStorage.setItem('planner_phone_names', JSON.stringify(map));
-          } catch {}
-        },
-
-        removeName(name) {
-          this.knownNames = this.knownNames.filter(n => n !== name);
-          localStorage.setItem('planner_names', JSON.stringify(this.knownNames));
-        },
-
-        loadClients() {
-          try {
-            this.clients = JSON.parse(localStorage.getItem('planner_clients') || '[]');
-          } catch { this.clients = []; }
-        },
-
-        saveClient(client) {
-          const existing = this.clients.find(c => c.phone === client.phone);
-          if (existing) {
-            existing.name = client.name || existing.name;
-            existing.email = client.email || existing.email;
-            // Add car if not already there
-            if (client.carMake || client.carModel) {
-              const carKey = `${client.carMake}|${client.carModel}|${client.carYear}`;
-              const carExists = existing.cars.some(c => `${c.make}|${c.model}|${c.year}` === carKey);
-              if (!carExists) {
-                existing.cars.push({ make: client.carMake, model: client.carModel, year: client.carYear, plate: client.carPlate, vin: client.carVin, mileage: client.carMileage });
-              } else {
-                // Update plate/vin/mileage if provided
-                const car = existing.cars.find(c => `${c.make}|${c.model}|${c.year}` === carKey);
-                if (client.carPlate && car) car.plate = client.carPlate;
-                if (client.carVin && car) car.vin = client.carVin;
-                if (client.carMileage && car) car.mileage = client.carMileage;
-              }
-            }
-          } else {
-            this.clients.push({
-              id: Date.now(),
-              name: client.name || '',
-              phone: client.phone || '',
-              email: client.email || '',
-              cars: (client.carMake || client.carModel) ? [{ make: client.carMake, model: client.carModel, year: client.carYear, plate: client.carPlate, vin: client.carVin, mileage: client.carMileage }] : [],
-              createdAt: new Date().toISOString(),
-            });
-          }
-          localStorage.setItem('planner_clients', JSON.stringify(this.clients));
-        },
-
-        deleteClient(id) {
-          this.clients = this.clients.filter(c => c.id !== id);
-          localStorage.setItem('planner_clients', JSON.stringify(this.clients));
-        },
-
-        fillFromClient(client) {
-          this.formName = client.name || '';
-          this.formPhone = client.phone || '';
-          if (client.cars.length > 0) {
-            const car = client.cars[client.cars.length - 1];
-            this.formCarMake = car.make || '';
-            this.formCarModel = car.model || '';
-            this.formCarYear = car.year || '';
-            this.formCarPlate = car.plate || '';
-            this.formCarVin = car.vin || '';
-            this.formCarMileage = car.mileage || '';
-          }
-        },
-
-        generateConsent(client) {
-          const name = client.name || 'Клиент';
-          const phone = client.phone || '';
-          const car = client.cars.length > 0 ? client.cars[client.cars.length - 1] : {};
-          const carInfo = [car.make, car.model, car.year].filter(Boolean).join(' ') || 'не указано';
-          const plate = car.plate ? ` (гос.номер: ${car.plate})` : '';
-          const today = new Date();
-          const dd = String(today.getDate()).padStart(2,'0');
-          const mm = String(today.getMonth()+1).padStart(2,'0');
-          const yyyy = today.getFullYear();
-
-          return `СОГЛАСИЕ\nна обработку персональных данных\n\n«${dd}.${mm}.${yyyy}» г.\n\nЯ, ${name}, ${phone}, в соответствии с Федеральным законом от 27.07.2006 № 152-ФЗ «О персональных данных», даю согласие на обработку моих персональных данных:\n\n1. Персональные данные:\n   — ФИО: ${name}\n   — Телефон: ${phone}\n   — Автомобиль: ${carInfo}${plate}\n\n2. Цель обработки:\n   — Оказание услуг по ремонту, обслуживанию и установке мультимедийных систем\n   — Связь по вопросам оказания услуг\n\n3. Перечень действий:\n   — Сбор, запись, систематизация, накопление, хранение, уточнение, извлечение, использование, обезличивание, блокирование, удаление персональных данных.\n\n4. Срок действия:\n   — Согласие действует бессрочно до момента его отзыва.\n\n5. Права субъекта персональных данных:\n   — Право на получение информации о обработке персональных данных\n   — Право на требование уточнения, блокирования или уничтожения данных\n   — Право на обжалование действий оператора\n\n6. Условия передачи:\n   — Персональные данные не передаются третьим лицам без согласия субъекта.\n\nПодпись: _________________ / ${name}/`;
-        },
-
-        sendConsentTelegram(client) {
-          const text = this.generateConsent(client);
-          const username = prompt('Telegram username для отправки (без @):');
-          if (!username) return;
-          navigator.clipboard.writeText(text).then(() => {
-            alert('Текст согласия скопирован в буфер обмена!\n\nОткройте чат с @' + username.trim() + ' и вставьте (Cmd+V)');
-            window.open('https://t.me/' + username.trim(), '_blank');
-          }).catch(() => {
-            window.open('https://t.me/' + username.trim(), '_blank');
-          });
-        },
-
-        sendConsent(messenger) {
-          if (!this.formPhone) return;
-          const name = this.formName || 'Клиент';
-          const phone = this.formPhone;
-          const car = [this.formCarMake, this.formCarModel, this.formCarYear].filter(Boolean).join(' ');
-          const phoneDigits = phone.replace(/\D/g, '');
-          const phoneLocal = phoneDigits.startsWith('7') ? phoneDigits.slice(1) : phoneDigits.slice(-10);
-
-          const text = `Согласие 152-ФЗ\nЯ, ${name}, ${phone}, даю согласие на обработку персональных данных для оказания услуг по ремонту и обслуживанию${car ? '. Авто: ' + car : ''}. Подпись: ___`;
-
-          if (messenger === 'whatsapp') {
-            navigator.clipboard.writeText(text).then(() => {
-              alert('Текст скопирован! Вставьте в чат WhatsApp.');
-              window.open('https://wa.me/' + phoneLocal, '_blank');
-            });
-          } else if (messenger === 'telegram') {
-            navigator.clipboard.writeText(text).then(() => {
-              alert('Текст скопирован! Вставьте в чат Telegram.');
-              window.open('https://t.me/+7' + phoneLocal, '_blank');
-            });
-          } else if (messenger === 'max') {
-            navigator.clipboard.writeText(text).then(() => {
-              alert('Текст скопирован! Вставьте в MAX.');
-              window.open('https://connect.mail.ru/messenger/?to=' + phone, '_blank');
-            });
-          } else if (messenger === 'sms') {
-            navigator.clipboard.writeText(text).then(() => {
-              alert('Текст скопирован! Вставьте в SMS.');
-              window.open('sms:' + phone, '_blank');
-            });
-          }
-        },
-
-        switchTab(id) {
-          this.activeTab = id;
-          this.loadTasks();
-          setTimeout(() => this.updateTimeLine(), 100);
-        },
-
-        addTab() {
-          const name = prompt('Название вкладки:');
-          if (!name || !name.trim()) return;
-          const id = 'tab_' + Date.now();
-          this.tabs.push({ id, name: name.trim() });
-          this.saveTabs();
-          this.switchTab(id);
-        },
-
-        renameTab(tab) {
-          const name = prompt('Новое название:', tab.name);
-          if (!name || !name.trim()) return;
-          tab.name = name.trim();
-          this.saveTabs();
-        },
-
-        deleteTab(id) {
-          if (this.tabs.length <= 1) return;
-          if (!confirm('Удалить вкладку со всеми задачами?')) return;
-          this.tabs = this.tabs.filter(t => t.id !== id);
-          const allTasks = JSON.parse(localStorage.getItem('planner_all_tasks') || '{}');
-          delete allTasks[id];
-          localStorage.setItem('planner_all_tasks', JSON.stringify(allTasks));
-          this.saveTabs();
-          if (this.activeTab === id) {
-            this.switchTab(this.tabs[0].id);
-          }
-        },
-      };
-    }
-  </script>
-
-  <!-- Task tooltip -->
-  <div x-show="tooltipTask" x-cloak class="task-tooltip"
-       :style="'left:'+tooltipX+'px;top:'+tooltipY+'px'">
-    <template x-if="tooltipTask">
-      <div>
-        <div class="font-semibold mb-1" x-text="tooltipTask.text"></div>
-        <template x-if="tooltipTask.name || tooltipTask.phone">
-          <div class="text-gray-400 text-[10px]">
-            <span x-show="tooltipTask.name" x-text="tooltipTask.name"></span>
-            <span x-show="tooltipTask.name && tooltipTask.phone"> · </span>
-            <span x-show="tooltipTask.phone" x-text="tooltipTask.phone"></span>
-          </div>
-        </template>
-        <template x-if="tooltipTask.carMake || tooltipTask.carModel">
-          <div class="text-gray-400 text-[10px] mt-0.5">
-            🚗 <span x-text="(tooltipTask.carMake||'') + ' ' + (tooltipTask.carModel||'') + (tooltipTask.carYear ? ' ' + tooltipTask.carYear : '')"></span>
-            <span x-show="tooltipTask.carPlate" x-text="'[' + tooltipTask.carPlate + ']'"></span>
-          </div>
-        </template>
-        <template x-if="tooltipTask.note">
-          <div class="text-gray-400 text-[10px] mt-0.5">📝 <span x-text="tooltipTask.note"></span></div>
-        </template>
-        <template x-if="tooltipTask.extra">
-          <div class="text-gray-400 text-[10px] mt-0.5">💡 <span x-text="tooltipTask.extra"></span></div>
-        </template>
-        <template x-if="tooltipTask.deadline">
-          <div class="text-[10px] mt-0.5" :class="isOverdue(tooltipTask) ? 'text-red-400' : 'text-gray-400'">
-            ⏰ <span x-text="fmtDeadline(tooltipTask.deadline)"></span>
-          </div>
-        </template>
-        <div class="flex items-center gap-2 mt-1 pt-1 border-t border-gray-600">
-          <span class="text-[9px] px-1.5 py-0.5 rounded"
-                :class="tooltipTask.status === 'done' ? 'bg-green-900 text-green-300' : 'bg-amber-900 text-amber-300'"
-                x-text="tooltipTask.status === 'done' ? 'Готово' : 'В работе'"></span>
-          <span x-show="tooltipTask.consent" class="text-[9px] text-green-400">✓ согласие</span>
-        </div>
-      </div>
-    </template>
-  </div>
-
   <!-- History detail modal -->
-  <div x-show="showHistoryDetail" x-cloak
-       class="fixed inset-0 z-50 flex items-center justify-center p-4"
-       x-transition:enter="transition ease-out duration-200"
-       x-transition:enter-start="opacity-0"
-       x-transition:enter-end="opacity-100"
-       x-transition:leave="transition ease-in duration-150"
-       x-transition:leave-start="opacity-100"
-       x-transition:leave-end="opacity-0">
-    <div class="absolute inset-0 bg-black/40" @click="showHistoryDetail = false"></div>
-    <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 dark:bg-gray-800"
-         x-transition:enter="transition ease-out duration-200"
-         x-transition:enter-start="opacity-0 scale-95"
-         x-transition:enter-end="opacity-100 scale-100">
+  <div v-show="showHistoryDetail" class="fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="showHistoryDetail=false">
+    <div class="absolute inset-0 bg-black/40" @click="showHistoryDetail=false"></div>
+    <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-5">
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-2">
           <button @click="historyNav(-1)" :disabled="historyDetailIndex <= 0"
-                  class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed text-sm">←</button>
-          <span class="text-xs text-gray-400" x-text="(historyDetailIndex+1) + ' / ' + historyRecords.length"></span>
+                  class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed text-sm">&larr;</button>
+          <span class="text-xs text-gray-400" v-text="(historyDetailIndex+1) + ' / ' + historyRecords.length"></span>
           <button @click="historyNav(1)" :disabled="historyDetailIndex >= historyRecords.length - 1"
-                  class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed text-sm">→</button>
+                  class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed text-sm">&rarr;</button>
         </div>
         <button @click="showHistoryDetail = false" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
       </div>
-      <template x-if="historyDetailTask">
+      <template v-if="historyDetailTask">
         <div class="space-y-2.5 text-sm">
-          <div class="text-xs text-gray-400" x-text="historyDetailTask.dateLabel"></div>
-          <div class="font-medium text-gray-900 dark:text-gray-100" x-text="historyDetailTask.text"></div>
-          <template x-if="historyDetailTask.name || historyDetailTask.phone">
-            <div class="flex gap-3 text-xs text-gray-500">
-              <span x-show="historyDetailTask.name" x-text="'👤 ' + historyDetailTask.name"></span>
-              <span x-show="historyDetailTask.phone" x-text="'📞 ' + historyDetailTask.phone"></span>
-            </div>
-          </template>
-          <template x-if="historyDetailTask.carMake || historyDetailTask.carModel">
-            <div class="text-xs text-gray-500">
-              🚗 <span x-text="(historyDetailTask.carMake||'') + ' ' + (historyDetailTask.carModel||'') + (historyDetailTask.carYear ? ' ' + historyDetailTask.carYear : '')"></span>
-              <span x-show="historyDetailTask.carPlate" class="ml-1" x-text="'[' + historyDetailTask.carPlate + ']'"></span>
-              <span x-show="historyDetailTask.carMileage" class="ml-1" x-text="historyDetailTask.carMileage + ' км'"></span>
-            </div>
-          </template>
-          <template x-if="historyDetailTask.note">
-            <div class="text-xs text-gray-500 bg-gray-50 dark:bg-gray-700 p-2 rounded-lg">
-              <span class="text-gray-400">Со слов заказчика:</span> <span x-text="historyDetailTask.note"></span>
-            </div>
-          </template>
-          <template x-if="historyDetailTask.extra">
-            <div class="text-xs text-gray-500 bg-gray-50 dark:bg-gray-700 p-2 rounded-lg">
-              <span class="text-gray-400">Рекомендация:</span> <span x-text="historyDetailTask.extra"></span>
-            </div>
-          </template>
-          <template x-if="historyDetailTask.deadline">
-            <div class="text-xs text-gray-400">Дедлайн: <span x-text="fmtDeadline(historyDetailTask.deadline)"></span></div>
-          </template>
+          <div class="text-xs text-gray-400" v-text="historyDetailTask.dateLabel"></div>
+          <div class="font-medium text-gray-900" v-text="historyDetailTask.text"></div>
+          <div v-if="historyDetailTask.name || historyDetailTask.phone" class="flex gap-3 text-xs text-gray-500">
+            <span v-show="historyDetailTask.name" v-text="historyDetailTask.name"></span>
+            <span v-show="historyDetailTask.phone" v-text="historyDetailTask.phone"></span>
+          </div>
+          <div v-if="historyDetailTask.carMake || historyDetailTask.carModel" class="text-xs text-gray-500">
+            🚗 <span v-text="(historyDetailTask.carMake||'') + ' ' + (historyDetailTask.carModel||'') + (historyDetailTask.carYear ? ' ' + historyDetailTask.carYear : '')"></span>
+            <span v-show="historyDetailTask.carPlate" class="ml-1" v-text="'[' + historyDetailTask.carPlate + ']'"></span>
+          </div>
+          <div v-if="historyDetailTask.note" class="text-xs text-gray-500 bg-gray-50 p-2 rounded-lg">
+            <span class="text-gray-400">Со слов заказчика:</span> <span v-text="historyDetailTask.note"></span>
+          </div>
+          <div v-if="historyDetailTask.extra" class="text-xs text-gray-500 bg-gray-50 p-2 rounded-lg">
+            <span class="text-gray-400">Рекомендация:</span> <span v-text="historyDetailTask.extra"></span>
+          </div>
+          <div v-if="historyDetailTask.deadline" class="text-xs text-gray-400" v-text="'Дедлайн: ' + fmtDeadline(historyDetailTask.deadline)"></div>
           <div class="flex items-center gap-2 pt-2">
             <span class="text-[10px] px-2 py-0.5 rounded-full"
                   :class="historyDetailTask.status === 'done' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'"
-                  x-text="historyDetailTask.status === 'done' ? 'Готово' : 'В работе'"></span>
+                  v-text="historyDetailTask.status === 'done' ? 'Готово' : 'В работе'"></span>
             <button @click="jumpToHistory(historyDetailTask); showHistoryDetail = false; showModal = false"
                     class="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors ml-auto">
               Перейти к записи →
             </button>
           </div>
-          <template x-if="historyDetailTask.createdAt">
-            <div class="text-[10px] text-gray-400 pt-1" x-text="'Создано: ' + fmtCreatedAt(historyDetailTask.createdAt)"></div>
-          </template>
         </div>
       </template>
     </div>
   </div>
+
+  <!-- Tooltip -->
+  <div v-if="tooltipTask" class="task-tooltip" :style="'left:'+tooltipX+'px;top:'+tooltipY+'px'">
+    <div class="font-semibold mb-1" v-text="tooltipTask.text"></div>
+    <div v-if="tooltipTask.name || tooltipTask.phone" class="text-gray-400 text-[10px]">
+      <span v-show="tooltipTask.name" v-text="tooltipTask.name"></span>
+      <span v-show="tooltipTask.name && tooltipTask.phone"> · </span>
+      <span v-show="tooltipTask.phone" v-text="tooltipTask.phone"></span>
+    </div>
+    <div v-if="tooltipTask.carMake || tooltipTask.carModel" class="text-gray-400 text-[10px] mt-0.5">
+      🚗 <span v-text="(tooltipTask.carMake||'') + ' ' + (tooltipTask.carModel||'') + (tooltipTask.carYear ? ' ' + tooltipTask.carYear : '')"></span>
+      <span v-show="tooltipTask.carPlate" v-text="'[' + tooltipTask.carPlate + ']'"></span>
+    </div>
+    <div v-if="tooltipTask.note" class="text-gray-400 text-[10px] mt-0.5">📝 <span v-text="tooltipTask.note"></span></div>
+    <div v-if="tooltipTask.extra" class="text-gray-400 text-[10px] mt-0.5">💡 <span v-text="tooltipTask.extra"></span></div>
+    <div v-if="tooltipTask.deadline" class="text-[10px] mt-0.5" :class="isOverdue(tooltipTask) ? 'text-red-400' : 'text-gray-400'">
+      ⏰ <span v-text="fmtDeadline(tooltipTask.deadline)"></span>
+    </div>
+    <div class="flex items-center gap-2 mt-1 pt-1 border-t border-gray-600">
+      <span class="text-[9px] px-1.5 py-0.5 rounded"
+            :class="tooltipTask.status === 'done' ? 'bg-green-900 text-green-300' : 'bg-amber-900 text-amber-300'"
+            v-text="tooltipTask.status === 'done' ? 'Готово' : 'В работе'"></span>
+      <span v-show="tooltipTask.consent" class="text-[9px] text-green-400">✓ согласие</span>
+    </div>
+  </div>
+</div>
+
+<script>
+const { createApp, ref, reactive, computed, watch, onMounted, nextTick } = Vue;
+
+createApp({
+  data() {
+    return {
+      tasks: [], tabs: [], activeTab: '',
+      showModal: false, editingTask: null,
+      formText: '', formStatus: 'todo', formColor: 'amber',
+      formName: '', formPhone: '', formNote: '', formExtra: '',
+      formDeadline: '', formDeadlineDate: '', formDeadlineTime: '',
+      deadlineTimes: [], formConsent: false, expandedForm: false,
+      tooltipTask: null, tooltipX: 0, tooltipY: 0,
+      formHistory: '', historyRecords: [],
+      showHistoryDetail: false, historyDetailTask: null, historyDetailIndex: 0,
+      formCarMake: '', formCarModel: '', formCarYear: '',
+      formCarPlate: '', formCarMileage: '', formCarVin: '',
+      historyExpanded: false, carExpanded: false,
+      searchQuery: '', expandedCells: {},
+      darkMode: false,
+      days: [],
+      colors: [
+        {id:'amber',bg:'#fef3c7',dot:'#f59e0b',bgDark:'#422006',textDark:'#fcd34d'},
+        {id:'green',bg:'#dcfce7',dot:'#22c55e',bgDark:'#052e16',textDark:'#86efac'},
+        {id:'blue',bg:'#dbeafe',dot:'#3b82f6',bgDark:'#1e3a5f',textDark:'#93c5fd'},
+        {id:'purple',bg:'#f3e8ff',dot:'#a855f7',bgDark:'#3b0764',textDark:'#d8b4fe'},
+        {id:'red',bg:'#fee2e2',dot:'#ef4444',bgDark:'#450a0a',textDark:'#fca5a5'},
+      ],
+      knownNames: [], showNamesList: false,
+      blockedNames: [],
+      builtInNames: ['александр','алексей','андрей','антон','аркадий','арсений','артём','артёмий','борис','вадим','валерий','василий','вася','виктор','виктория','виталий','влад','владимир','владислав','владлен','всеволод','вячеслав','геннадий','георгий','глеб','гор','давид','даниил','денис','диана','дима','дмитрий','евгений','евлампий','егор','елисей','елена','ерик','ермак','жан','захар','иван','игорь','ильдар','илья','иннокентий','костя','кирилл','константин','катя','екатерина','лавр','лаврентий','лариса','лена','лёня','леонид','леша','люда','людмила','марина','максим','марк','матвей','мила','милана','мирослава','миша','михаил','митрофан','надежда','надя','назар','наталия','наталья','наташа','нелли','никита','николай','нина','нита','анита','ольга','оля','павел','пётр','петя','полина','прокопий','роман','ростислав','руслан','саша','святослав','семён','сергей','серёжа','спартак','станислав','стал','степан','сузанна','тамара','таня','тимофей','трифон','ульяна','валя','валентина','фёдор','федя','филипп','юлия','эдуард','эльвира','эммануил','юрий','ярослав'],
+      clients: [], showClientsList: false, expandedClient: null, clientFilter: '',
+      carDictionary: [], showDictList: false,
+      dictType: 'make', dictValue: '', dictAliases: '',
+      hourStart: 10, hourEnd: 19,
+      weekOffset: 0,
+      showSunday: false,
+      hours: [], timeLine: { visible: false, top: 0 },
+      _dragTask: null,
+      isDragging: false,
+    };
+  },
+
+  computed: {
+    filteredClients() {
+      if (!this.clientFilter.trim()) return this.clients;
+      const q = this.clientFilter.toLowerCase();
+      return this.clients.filter(c => {
+        if ((c.name||'').toLowerCase().includes(q)) return true;
+        if ((c.phone||'').toLowerCase().includes(q)) return true;
+        if (c.cars && c.cars.some(car => (car.make||'').toLowerCase().includes(q) || (car.model||'').toLowerCase().includes(q) || (car.plate||'').toLowerCase().includes(q))) return true;
+        return false;
+      });
+    },
+  },
+
+  methods: {
+    // ─── Week navigation ───
+    calcWeek() {
+      const now = new Date();
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - ((now.getDay() + 6) % 7) + this.weekOffset * 7);
+      const dayNames = ['Пн','Вт','Ср','Чт','Пт','Сб'];
+      const dayCount = this.showSunday ? 7 : 6;
+      this.days = [];
+      for (let i = 0; i < dayCount; i++) {
+        const d = new Date(monday); d.setDate(monday.getDate() + i);
+        this.days.push({ short: dayNames[i] || 'Вс', num: d.getDate(), date: d, dateStr: this.dateStr(d) });
+      }
+      this.recalcHours();
+    },
+    recalcHours() { this.hours = []; for (let h = this.hourStart; h <= this.hourEnd; h++) this.hours.push(h); },
+    dateStr(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; },
+    isToday(d) { const n = new Date(); return d.getFullYear()===n.getFullYear() && d.getMonth()===n.getMonth() && d.getDate()===n.getDate(); },
+    weekLabel() {
+      if (!this.days.length) return '';
+      const fmt = d => `${d.getDate()} ${['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'][d.getMonth()]}`;
+      return `${fmt(this.days[0].date)} — ${fmt(this.days[this.days.length-1].date)}`;
+    },
+    prevWeek() { this.weekOffset--; this.calcWeek(); },
+    nextWeek() { this.weekOffset++; this.calcWeek(); },
+    goToday() { this.weekOffset = 0; this.calcWeek(); },
+    toggleSunday() { this.showSunday = !this.showSunday; this.calcWeek(); this.savePrefs(); },
+    addHourEnd() { if (this.hourEnd < 23) { this.hourEnd++; this.recalcHours(); this.savePrefs(); } },
+    removeHourEnd() { if (this.hourEnd > this.hourStart) { this.hourEnd--; this.recalcHours(); this.savePrefs(); } },
+    addHourStart() { if (this.hourStart > 0) { this.hourStart--; this.recalcHours(); this.savePrefs(); } },
+    removeHourStart() { if (this.hourStart < this.hourEnd) { this.hourStart++; this.recalcHours(); this.savePrefs(); } },
+
+    // ─── Tasks ───
+    getTasks(day, hour) {
+      let list = this.tasks.filter(t => t.day === day && t.hour === hour);
+      if (this.searchQuery.trim()) {
+        const q = this.searchQuery.toLowerCase();
+        list = list.filter(t => [t.text,t.name,t.phone,t.note,t.extra,t.carMake,t.carModel].some(f => (f||'').toLowerCase().includes(q)));
+      }
+      return list;
+    },
+    toggleStatus(task) { task.status = task.status === 'done' ? 'todo' : 'done'; this.persist(); },
+    toggleExpand(key) { this.expandedCells[key] = !this.expandedCells[key]; },
+    taskStyle(task) {
+      const c = task.status === 'done'
+        ? this.colors.find(x => x.id === 'green')
+        : this.colors.find(x => x.id === (task.color || 'amber')) || this.colors[0];
+      return this.darkMode
+        ? `background:${c.bgDark};border-color:${c.dot};color:${c.textDark}`
+        : `background:${c.bg};border-color:${c.dot}`;
+    },
+
+    // ─── Modal ───
+    openModal(day, hour, task = null) {
+      this.formDay = day; this.formHour = hour;
+      this.editingTask = task;
+      this.formText = task ? task.text : '';
+      this.formStatus = task ? task.status : 'todo';
+      this.formColor = task ? (task.color || 'amber') : 'amber';
+      this.formName = task ? (task.name || '') : '';
+      this.formPhone = task ? (task.phone || '') : '';
+      this.formNote = task ? (task.note || '') : '';
+      this.formExtra = task ? (task.extra || '') : '';
+      this.formDeadline = task ? (task.deadline || '') : '';
+      this.formDeadlineDate = this.formDeadline.split('T')[0] || '';
+      this.formDeadlineTime = this.formDeadline.split('T')[1] ? this.formDeadline.split('T')[1].slice(0,5) : '';
+      this.formHistory = '';
+      this.historyRecords = [];
+      this.historyExpanded = false;
+      this.carExpanded = false;
+      this.formCarMake = task ? (task.carMake || '') : '';
+      this.formCarModel = task ? (task.carModel || '') : '';
+      this.formCarYear = task ? (task.carYear || '') : '';
+      this.formCarPlate = task ? (task.carPlate || '') : '';
+      this.formCarMileage = task ? (task.carMileage || '') : '';
+      this.formCarVin = task ? (task.carVin || '') : '';
+      this.formConsent = task ? !!task.consent : false;
+      this.showModal = true;
+      if (task && task.phone) this.findPreviousByPhone(task.phone.replace(/\D/g,''));
+    },
+    closeModal() {
+      this.showModal = false; this.editingTask = null;
+      this.formText = ''; this.formStatus = 'todo'; this.formColor = 'amber';
+      this.formName = ''; this.formPhone = ''; this.formNote = ''; this.formExtra = '';
+      this.formDeadline = ''; this.formDeadlineDate = ''; this.formDeadlineTime = '';
+      this.formHistory = ''; this.historyRecords = []; this.historyExpanded = false;
+      this.carExpanded = false; this.formCarMake = ''; this.formCarModel = '';
+      this.formCarYear = ''; this.formCarPlate = ''; this.formCarMileage = ''; this.formCarVin = '';
+    },
+    saveTask() {
+      if (!this.formText.trim()) return;
+      const data = {
+        text: this.formText.trim(), status: this.formStatus, color: this.formColor,
+        name: this.formName.trim(), phone: this.formPhone.trim(),
+        note: this.formNote.trim(), extra: this.formExtra.trim(),
+        deadline: this.formDeadlineDate + (this.formDeadlineTime ? 'T' + this.formDeadlineTime : ''),
+        consent: this.formConsent,
+        carMake: this.normalizeCarMake(this.formCarMake),
+        carModel: this.normalizeCarModel(this.formCarModel, this.formCarMake),
+        carYear: this.formCarYear.trim(), carPlate: this.formCarPlate.trim().toUpperCase(),
+        carMileage: this.formCarMileage.trim(), carVin: this.formCarVin.trim().toUpperCase(),
+      };
+      if (this.editingTask) { Object.assign(this.editingTask, data); }
+      else { this.tasks.push({ id: Date.now(), day: this.formDay, hour: this.formHour, createdAt: new Date().toISOString(), ...data }); }
+      this.persist();
+      if (data.name) this.saveName(data.name);
+      if (data.phone && data.name) this.savePhoneName(data.phone, data.name);
+      if (data.phone) this.saveClient(data);
+      // Auto-add model to dictionary if it was manually entered (not in built-in list)
+      if (data.carModel && this.formCarMake) {
+        const builtInModels = ['камри','camry','королла','corolla','рав4','rav4','соларис','solaris','крета','creta','туксон','tucson','рио','rio','спортаж','sportage','церато','cerato','оптима','optima','соната','sonata','элантра','elantra','соренто','sorento','кашкай','qashqai','икс-трейл','x-trail','патрол','patrol','мурано','murano','цх-5','cx-5','цх-3','cx-3','цх-9','cx-9','дастер','duster','логан','logan','поло','polo','тигуан','tiguan','пассат','passat','фокус','focus','круз','cruze','ланос','lanos','веста','vesta','гранта','granta','октавия','octavia','аутлендер','outlander','тигго','tiggo','эмгранд','emgrand','кулрей','coolray','атлас','atlas','ленд круйзер','land cruiser','прадо','prado','лк','лс','рэндж ровер','range rover','ленд ровер','land rover','лр'];
+        if (!builtInModels.includes(this.formCarModel.toLowerCase().trim())) {
+          const exists = this.carDictionary.some(d => d.type === 'model' && d.value === data.carModel);
+          if (!exists) {
+            this.carDictionary.push({ id: Date.now(), type: 'model', value: data.carModel, aliases: [this.formCarModel.toLowerCase().trim()] });
+            this.saveDict();
+          }
+        }
+      }
+      this.closeModal();
+    },
+    deleteTask() { if (!this.editingTask) return; this.tasks = this.tasks.filter(t => t.id !== this.editingTask.id); this.persist(); this.closeModal(); },
+
+    // ─── Autofill ───
+    autofillFromText() {
+      const t = this.formText;
+      if (!t || t.length < 2) return;
+      const lower = t.toLowerCase();
+      const makes = ['тойота','тайота','toyota','той','хендай','хёндэ','hyundai','киа','kia','нисан','ниссан','nissan','мазда','mazda','рено','renault','фольксваген','volkswagen','пежо','peugeot','ситроен','citroen','опель','opel','форд','ford','шевроле','chevrolet','хонда','honda','субару','subaru','митсубиси','mitsubishi','сузуки','suzuki','лада','lada','бмв','bmw','мерседес','mercedes','ауди','audi','volvo','вольво','джили','geely','чери','chery','хавал','haval','чанган','changan','эксид','exeed','ленд ровер','land rover','рэндж ровер','range rover'];
+      const models = ['камри','camry','королла','corolla','рав4','rav4','соларис','solaris','крета','creta','туксон','tucson','рио','rio','спортаж','sportage','церато','cerato','оптима','optima','соната','sonata','элантра','elantra','соренто','sorento','кашкай','qashqai','икс-трейл','x-trail','патрол','patrol','мурано','murano','цх-5','cx-5','цх-3','cx-3','цх-9','cx-9','дастер','duster','логан','logan','поло','polo','тигуан','tiguan','пассат','passat','фокус','focus','круз','cruze','ланос','lanos','веста','vesta','гранта','granta','октавия','octavia','аутлендер','outlander','тигго','tiggo','эмгранд','emgrand','кулрей','coolray','атлас','atlas','ленд круйзер','land cruiser','прадо','prado','лк','лс','рэндж ровер','range rover','ленд ровер','land rover','лр'];
+
+      // Phone
+      const phoneMatch = t.match(/(?:\+?7|8)[\s\-\(\)]*(\d[\s\-\(\)]*){8,11}/);
+      if (phoneMatch && !this.formPhone) {
+        const raw = phoneMatch[0].replace(/\D/g, '');
+        if (raw.length >= 10) { this.formPhone = this.formatPhoneRaw(raw); this.onPhoneInput(this.formPhone); }
+      }
+
+      // Make
+      for (const m of makes) {
+        if (lower.includes(m)) { this.formCarMake = this.normalizeCarMake(m); break; }
+      }
+
+      // Model
+      if (this.formCarMake) {
+        for (const m of models) {
+          if (lower.includes(m)) { this.formCarModel = this.normalizeCarModel(m, this.formCarMake); break; }
+        }
+      }
+
+      // Name — check built-in names + known names + patterns
+      const withoutPhone = t.replace(/(?:\+?7|8)[\s\-\(\)]*(\d[\s\-\(\)]*){8,11}/g, '').trim();
+      const allNames = [...this.builtInNames, ...this.knownNames.map(n => n.toLowerCase())];
+      const words = withoutPhone.split(/\s+/);
+      let detectedName = null;
+
+      // 1. Check all known names (built-in + user-saved)
+      for (const w of words) {
+        const wl = w.toLowerCase();
+        if (allNames.includes(wl)) {
+          detectedName = w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+          break;
+        }
+      }
+
+      // 3. Check patterns (for client name with prepositions)
+      if (!detectedName) {
+        const namePats = [
+          /(?:для|клиент|заказчик|имя|зовут|позвонить)\s+([А-ЯЁа-яё]{2,20})\b/i,
+          /\b([А-ЯЁа-яё]{3,20})\s+(?:позвонит|приедет|ждет|ждёт|записан|хочет|нужен|будет)\b/i,
+        ];
+        for (const pat of namePats) { const m = withoutPhone.match(pat); if (m) { detectedName = m[1]; break; } }
+      }
+
+      if (detectedName) this.formName = detectedName;
+    },
+
+    // ─── Phone ───
+    formatPhoneRaw(raw) {
+      const d = raw.replace(/\D/g, '');
+      if (d.length < 10) return raw;
+      const full = d.length >= 11 ? d.slice(-11) : '7' + d.slice(-10);
+      return `+7 (${full.slice(1,4)}) ${full.slice(4,7)}-${full.slice(7,9)}-${full.slice(9,11)}`;
+    },
+    onPhoneInput(val) {
+      const raw = val.replace(/\D/g, '');
+      this.formPhone = this.formatPhoneRaw(raw);
+      if (raw.length >= 10) this.findPreviousByPhone(raw);
+    },
+    checkPhone(val) {
+      const raw = val.replace(/\D/g, '');
+      if (raw.length >= 10) this.findPreviousByPhone(raw);
+    },
+
+    // ─── Normalize ───
+    normalizeCarMake(make) {
+      const map = {'тойота':'TOYOTA','тайота':'TOYOTA','toyota':'TOYOTA','той':'TOYOTA','хендай':'HYUNDAI','хёндэ':'HYUNDAI','hyundai':'HYUNDAI','киа':'KIA','kia':'KIA','нисан':'NISSAN','ниссан':'NISSAN','nissan':'NISSAN','мазда':'MAZDA','mazda':'MAZDA','рено':'RENAULT','ренault':'RENAULT','фольксваген':'VOLKSWAGEN','volkswagen':'VOLKSWAGEN','пежо':'PEUGEOT','peugeot':'PEUGEOT','ситроен':'CITROEN','citroen':'CITROEN','опель':'OPEL','opel':'OPEL','форд':'FORD','ford':'FORD','шевроле':'CHEVROLET','chevrolet':'CHEVROLET','хонда':'HONDA','honda':'HONDA','субару':'SUBARU','subaru':'SUBARU','митсубиси':'MITSUBISHI','mitsubishi':'MITSUBISHI','сузуки':'SUZUKI','suzuki':'SUZUKI','лада':'LADA','lada':'LADA','бмв':'BMW','bmw':'BMW','мерседес':'MERCEDES','mercedes':'MERCEDES','ауди':'AUDI','audi':'AUDI','вольво':'VOLVO','volvo':'VOLVO','ленд ровер':'LAND ROVER','land rover':'LAND ROVER','лр':'LAND ROVER','рэндж ровер':'RANGE ROVER','range rover':'RANGE ROVER','рр':'RANGE ROVER','джили':'GEELY','geely':'GEELY','чери':'CHERY','chery':'CHERY','хавал':'HAVAL','haval':'HAVAL','чанган':'CHANGAN','changan':'CHANGAN','эксид':'EXEED','exeed':'EXEED'};
+      return map[make.toLowerCase().trim()] || make.toUpperCase();
+    },
+    normalizeCarModel(model) {
+      const map = {'камри':'CAMRY','королла':'COROLLA','рав4':'RAV4','rav4':'RAV4','соларис':'SOLARIS','крета':'CRETA','туксон':'TUCSON','рио':'RIO','спортаж':'SPORTAGE','церато':'CERATO','оптима':'OPTIMA','соната':'SONATA','элантра':'ELANTRA','соренто':'SORENTO','кашкай':'QASHQAI','патрол':'PATROL','мурано':'MURANO','цх-5':'CX-5','цх-3':'CX-3','цх-9':'CX-9','дастер':'DUSTER','логан':'LOGAN','поло':'POLO','тигуан':'TIGUAN','пассат':'PASSAT','фокус':'FOCUS','круз':'CRUZE','ланос':'LANOS','веста':'VESTA','гранта':'GRANTA','октавия':'OCTAVIA','аутлендер':'OUTLANDER','тигго':'TIGGO','эмгранд':'EMGRAND','кулрей':'COOLRAY','атлас':'ATLAS','ленд круйзер':'LAND CRUISER','land cruiser':'LAND CRUISER','прадо':'PRADO','prado':'PRADO','рэндж ровер':'RANGE ROVER','range rover':'RANGE ROVER','ленд ровер':'LAND ROVER','land rover':'LAND ROVER','лр':'LAND ROVER','рр':'RANGE ROVER'};
+      return map[model.toLowerCase().trim()] || model.toUpperCase();
+    },
+    validateVin() { this.formCarVin = this.formCarVin.replace(/[^A-HJ-NPR-Z0-9]/gi,'').replace(/O/gi,'0').toUpperCase().slice(0,17); },
+
+    // ─── History & Search ───
+    findPreviousByPhone(phone) {
+      const digits = phone.replace(/\D/g, '').slice(-10);
+      if (digits.length < 10) { this.formHistory = ''; this.historyRecords = []; return; }
+      let allTasks = [...this.tasks];
+      try {
+        const allData = JSON.parse(localStorage.getItem('planner_all_tasks') || '{}');
+        for (const [tabId, tabTasks] of Object.entries(allData)) {
+          if (tabId !== this.activeTab) allTasks = allTasks.concat(tabTasks);
+        }
+      } catch {}
+      const matches = allTasks.filter(t => { if (!t.phone) return false; return t.phone.replace(/\D/g,'').slice(-10) === digits; });
+      if (matches.length === 0) { this.formHistory = ''; this.historyRecords = []; return; }
+      if (!this.formName) { const named = matches.find(t => t.name); if (named) this.formName = named.name; }
+      const months = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+      const sorted = [...matches].sort((a, b) => b.day.localeCompare(a.day));
+      this.historyRecords = sorted.map(t => { const d = new Date(t.day+'T00:00:00'); return { ...t, dateLabel: `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}, ${t.hour}:00` }; });
+      this.formHistory = sorted.map(t => { const d = new Date(t.day+'T00:00:00'); return `${d.getDate()} ${months[d.getMonth()]} — ${t.text}`; }).join('\n');
+    },
+    historyNav(dir) { const i = this.historyDetailIndex + dir; if (i < 0 || i >= this.historyRecords.length) return; this.historyDetailIndex = i; this.historyDetailTask = this.historyRecords[i]; },
+    searchResults() {
+      const q = this.searchQuery.toLowerCase().trim();
+      if (!q) return [];
+      return this.tasks.filter(t => [t.text,t.name,t.phone,t.note,t.extra,t.carMake,t.carModel].some(f => (f||'').toLowerCase().includes(q)))
+        .sort((a, b) => a.day.localeCompare(b.day) || a.hour - b.hour);
+    },
+    jumpToTask(task) { const d = new Date(task.day+'T00:00:00'); const now = new Date(); const monday = new Date(now); monday.setDate(now.getDate()-((now.getDay()+6)%7)); this.weekOffset = Math.round((d-monday)/86400000/7); this.calcWeek(); },
+    jumpToHistory(task) {
+      if (!task || !task.day) return;
+      const d = new Date(task.day+'T00:00:00'); const now = new Date(); const monday = new Date(now); monday.setDate(now.getDate()-((now.getDay()+6)%7));
+      this.weekOffset = Math.round((d-monday)/86400000/7); this.calcWeek();
+      setTimeout(() => { const cell = document.querySelector(`td[data-day="${task.day}"][data-hour="${task.hour}"]`); if (cell) { cell.scrollIntoView({behavior:'smooth',block:'center'}); cell.classList.add('blink-cell'); setTimeout(()=>cell.classList.remove('blink-cell'),3000); } }, 100);
+    },
+    formatTaskDate(t) { const d = new Date(t.day+'T00:00:00'); const months = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек']; return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}, ${t.hour}:00`; },
+    fmtDeadline(val) { if (!val) return ''; const d = new Date(val); const months = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек']; return `${d.getDate()} ${months[d.getMonth()]} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; },
+    fmtCreatedAt(val) { if (!val) return ''; const d = new Date(val); const months = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек']; return `${d.getDate()} ${months[d.getMonth()]} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; },
+    isOverdue(task) { if (!task.deadline || task.status === 'done') return false; return new Date() > new Date(task.deadline); },
+    modalDateLabel() { if (!this.formDay) return ''; const d = new Date(this.formDay+'T00:00:00'); const days = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота']; return `${days[d.getDay()]}, ${this.formHour}:00`; },
+
+    // ─── Drag & Drop ───
+    dragStart(e, task) { this._dragTask = task; this.isDragging = true; this.tooltipTask = null; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', task.id); },
+    handleCellClick(e, day, hour) { if (this.isDragging) return; this.openModal(day, hour); },
+    showTooltip(e, task) { if (this.isDragging) return;
+      this.tooltipTask = task;
+      this.$nextTick(() => {
+        const rect = e.target.getBoundingClientRect();
+        let left = rect.right + 6;
+        let top = rect.top;
+        if (left + 220 > window.innerWidth) left = rect.left - 226;
+        if (top + 150 > window.innerHeight) top = window.innerHeight - 160;
+        this.tooltipX = left;
+        this.tooltipY = top;
+      });
+    },
+    dropTask(day, hour) { if (!this._dragTask) return; this._dragTask.day = day; this._dragTask.hour = hour; this._dragTask = null; this.isDragging = false; this.persist(); },
+
+    // ─── Time line ───
+    updateTimeLine() {
+      const now = new Date(); const h = now.getHours(); const m = now.getMinutes();
+      if (h < this.hourStart || h > this.hourEnd) { this.timeLine.visible = false; return; }
+      const thead = document.querySelector('thead');
+      const ROW_H = 52;
+      this.timeLine.visible = true;
+      this.timeLine.top = (thead ? thead.offsetHeight : 0) + (h - this.hourStart) * ROW_H + (m / 60) * ROW_H;
+    },
+
+    // ─── Tabs ───
+    switchTab(id) { this.activeTab = id; this.loadTasks(); },
+    addTab() { const name = prompt('Название вкладки:'); if (!name || !name.trim()) return; const id = 'tab_' + Date.now(); this.tabs.push({id, name: name.trim()}); this.saveTabs(); this.switchTab(id); },
+    renameTab(tab) { const name = prompt('Название:', tab.name); if (!name || !name.trim()) return; tab.name = name.trim(); this.saveTabs(); },
+    deleteTab(id) { if (this.tabs.length <= 1) return; if (!confirm('Удалить?')) return; this.tabs = this.tabs.filter(t => t.id !== id); const all = JSON.parse(localStorage.getItem('planner_all_tasks')||'{}'); delete all[id]; localStorage.setItem('planner_all_tasks', JSON.stringify(all)); this.saveTabs(); if (this.activeTab === id) this.switchTab(this.tabs[0].id); },
+    saveTabs() { localStorage.setItem('planner_tabs', JSON.stringify(this.tabs)); },
+    loadTabs() { try { this.tabs = JSON.parse(localStorage.getItem('planner_tabs') || '[]'); } catch { this.tabs = []; } if (!this.tabs.length) { this.tabs = [{id:'tab_1',name:'Основное'}]; this.saveTabs(); } this.activeTab = this.tabs[0].id; this.loadTasks(); },
+    savePrefs() { localStorage.setItem('planner_prefs', JSON.stringify({ hourStart: this.hourStart, hourEnd: this.hourEnd, showSunday: this.showSunday })); },
+    loadPrefs() { try { const p = JSON.parse(localStorage.getItem('planner_prefs') || '{}'); if (p.hourStart !== undefined) this.hourStart = p.hourStart; if (p.hourEnd !== undefined) this.hourEnd = p.hourEnd; if (p.showSunday !== undefined) this.showSunday = p.showSunday; } catch {} },
+
+    // ─── Storage ───
+    persist() { const all = JSON.parse(localStorage.getItem('planner_all_tasks')||'{}'); all[this.activeTab] = this.tasks; localStorage.setItem('planner_all_tasks', JSON.stringify(all)); },
+    loadTasks() { try { const all = JSON.parse(localStorage.getItem('planner_all_tasks')||'{}'); this.tasks = all[this.activeTab] || []; } catch { this.tasks = []; } },
+    loadNames() { try { this.knownNames = JSON.parse(localStorage.getItem('planner_names')||'[]'); } catch { this.knownNames = []; } try { this.blockedNames = JSON.parse(localStorage.getItem('planner_blocked_names')||'[]'); } catch { this.blockedNames = []; } },
+    saveName(name) { if (!name || this.knownNames.includes(name)) return; this.knownNames.push(name); this.knownNames.sort(); localStorage.setItem('planner_names', JSON.stringify(this.knownNames)); },
+    blockName(name) { this.knownNames = this.knownNames.filter(n => n !== name); localStorage.setItem('planner_names', JSON.stringify(this.knownNames)); if (!this.blockedNames.includes(name)) { this.blockedNames.push(name); this.blockedNames.sort(); localStorage.setItem('planner_blocked_names', JSON.stringify(this.blockedNames)); } },
+    unblockName(i) { this.blockedNames.splice(i, 1); localStorage.setItem('planner_blocked_names', JSON.stringify(this.blockedNames)); },
+    savePhoneName(phone, name) { if (!phone||!name) return; try { const map = JSON.parse(localStorage.getItem('planner_phone_names')||'{}'); map[phone.replace(/\D/g,'').slice(-10)] = name; localStorage.setItem('planner_phone_names', JSON.stringify(map)); } catch {} },
+    loadClients() { try { this.clients = JSON.parse(localStorage.getItem('planner_clients')||'[]'); } catch { this.clients = []; } },
+    saveClient(c) { if (!c.phone) return; const existing = this.clients.find(x => x.phone === c.phone); if (existing) { if (c.name) existing.name = c.name; } else { this.clients.push({ id: Date.now(), name: c.name||'', phone: c.phone, cars: [] }); } localStorage.setItem('planner_clients', JSON.stringify(this.clients)); },
+    deleteClient(id) { this.clients = this.clients.filter(c => c.id !== id); localStorage.setItem('planner_clients', JSON.stringify(this.clients)); },
+    fillFromClient(c) { this.formName = c.name||''; this.formPhone = c.phone||''; },
+    clientTaskCount(c) { return this.tasks.filter(t => t.phone && t.phone.replace(/\D/g,'').slice(-10) === (c.phone||'').replace(/\D/g,'').slice(-10)).length; },
+    clientTasks(c) { return this.tasks.filter(t => t.phone && t.phone.replace(/\D/g,'').slice(-10) === (c.phone||'').replace(/\D/g,'').slice(-10)).sort((a,b) => b.day.localeCompare(a.day)); },
+    fmtShortDate(day) { const d = new Date(day+'T00:00:00'); const months = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек']; return d.getDate()+' '+months[d.getMonth()]; },
+    loadDict() { try { this.carDictionary = JSON.parse(localStorage.getItem('planner_car_dict')||'[]'); } catch { this.carDictionary = []; } },
+    saveDict() { localStorage.setItem('planner_car_dict', JSON.stringify(this.carDictionary)); },
+    addDictEntry() { if (!this.dictValue.trim()||!this.dictAliases.trim()) return; const aliases = this.dictAliases.split(',').map(a=>a.trim().toLowerCase()).filter(Boolean); this.carDictionary.push({id:Date.now(),type:this.dictType,value:this.dictValue.trim().toUpperCase(),aliases}); this.saveDict(); this.dictValue=''; this.dictAliases=''; },
+    removeDictEntry(id) { this.carDictionary = this.carDictionary.filter(d=>d.id!==id); this.saveDict(); },
+    isDictDuplicate() { return this.carDictionary.some(d => d.value === this.dictValue.trim().toUpperCase() && d.type === this.dictType); },
+
+    // ─── Dark mode ───
+    toggleDark() { this.darkMode = !this.darkMode; localStorage.setItem('planner_dark', this.darkMode); this.applyDark(); },
+    applyDark() { document.documentElement.classList.toggle('dark', this.darkMode); },
+
+    // ─── Consent ───
+    generateConsent(c) { const name = c.name||'Клиент'; const phone = c.phone||''; const car = [c.carMake,c.carModel,c.carYear].filter(Boolean).join(' '); return `Согласие 152-ФЗ\nЯ, ${name}, ${phone}, даю согласие на обработку персональных данных${car ? '. Авто: '+car : ''}. Подпись: ___`; },
+    sendConsent(messenger) {
+      if (!this.formPhone) return;
+      const phoneDigits = this.formPhone.replace(/\D/g,'');
+      const phoneFull = phoneDigits.startsWith('7') ? phoneDigits : '7'+phoneDigits.slice(-10);
+      const urls = { whatsapp:'https://wa.me/'+phoneFull, telegram:'https://t.me/+'+phoneFull, sms:'sms:'+phoneFull };
+      if (urls[messenger]) window.open(urls[messenger], '_blank');
+    },
+
+    // ─── Init ───
+    init() {
+      this.loadTabs(); this.loadNames(); this.loadClients(); this.loadDict(); this.loadPrefs();
+      this.darkMode = localStorage.getItem('planner_dark') === 'true'; this.applyDark();
+      this.calcWeek();
+      this.$nextTick(() => this.updateTimeLine());
+      setInterval(() => this.updateTimeLine(), 60000);
+    },
+  },
+
+  mounted() { this.init(); },
+}).mount('#app');
+</script>
 </body>
 </html>
